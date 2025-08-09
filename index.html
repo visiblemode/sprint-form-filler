@@ -248,7 +248,7 @@
             <div class="icons-grid" id="iconsGrid"></div>
         </div>
 
-        <button class="generate-btn" onclick="generateTierList()">Generate Tier List</button>
+        <button class="generate-btn" onclick="generateTierList()">Fill Google Form</button>
     </div>
 
     <script language="javascript" src="lz-string.min.js"></script>
@@ -635,10 +635,7 @@
             });
             
             const theLink = `${baseUrl}?${params.toString()}`
-            
-            // You could generate a shareable link here
-            const encodedData = btoa(JSON.stringify(tierList));
-            const shareableLink = `${window.location.origin}${window.location.pathname}?data=${encodedData}`;
+            window.open(theLink, "_blank");
             console.log('Shareable Link:', theLink);
         }
 
@@ -647,3 +644,4 @@
     </script>
 </body>
 </html>
+
