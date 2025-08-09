@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Google Forms Entry ID Extractor</title>
+</head>
+<body>
+    <h1>Google Forms Entry ID Extractor</h1>
+    
+    <textarea id="htmlInput1" placeholder="Paste the Google Forms HTML here..." rows="5" cols="60"></textarea>
+    <br><br>
+    
+    <h1>Pokémon Sleep Data Extractor</h1>
+    
+    <textarea id="htmlInput2" rows="5" cols="60" placeholder="Paste Serebii HTML content here..."></textarea>
+    <br><br>
+
+    <h1>Pokemon Ordering (optional)</h1>
+    
+    <textarea id="htmlInput3" rows="10" cols="60" placeholder="Mudkip
+Treecko
+Chansey"></textarea>
+    <br><br>
+
+    <h1>Form Link</h1>
+    
+    <textarea id="htmlInput4" rows="1" cols="100" placeholder="https://docs.google.com/forms/d/e/1FAIpQLSfgDq6VMxEZ-asWgDp8zF3ahhh1LR4aIoLHUre0VM6eJDf_hA/viewform"></textarea>
+    <br><br>
+
+    <button onclick="extractData()">Extract Data</button>
+    
+    <div id="resultArea" style="display: none;">
+        <br><br>
+        <h2>Generated URL:</h2>
+        <textarea id="urlOutput" rows="3" cols="100" readonly style="background-color: #f0f0f0;"></textarea>
+        <br><br>
+        <button onclick="copyToClipboard()">Copy URL</button>
+        <button onclick="shortenUrl()">Shorten with is.gd</button>
+        
+        <div id="shortUrlArea" style="display: none;">
+            <br>
+            <h3>Shortened URL:</h3>
+            <textarea id="shortUrlOutput" rows="2" cols="100" readonly style="background-color: #e0ffe0;"></textarea>
+            <br><br>
+            <button onclick="copyShortUrl()">Copy Short URL</button>
+        </div>
+    </div>
+    
+    <br><br>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.4.4/lz-string.min.js"></script>
+    <script>
+        function extractEntryIdsData(htmlContent) {
+            try {
+                const scriptMatch = htmlContent.match(/var FB_PUBLIC_LOAD_DATA_ = (\[.*?\]);/s);
+                
+                if (!scriptMatch) {
+                    console.error('Could not find FB_PUBLIC_LOAD_DATA_ in the HTML');
+                    return null;
+                }
+                
+                const formData = JSON.parse(scriptMatch[1]);
+                const questions = formData[1][1];
+                const entryIds = {};
+                const pokemonNames = [];
+                
+                questions.forEach(question => {
+                    const questionId = question[0];
+                    const questionTitle = question[1];
+                    const questionType = question[3];
+                    const entries = question[4];
+                    
+                    // Handle TOP questions
+                    if (questionTitle && questionTitle.includes('TOP #')) {
+                        const topNumber = questionTitle.match(/TOP #(\d+)/);
+                        if (topNumber && entries && entries[0]) {
+                            const entryId = entries[0][0];
+                            entryIds[`top${topNumber[1]}`] = entryId;
+                        }
+                    }
+                    
+                    // Handle Pokemon importance grid
+                    else if (questionType === 7 && entries && questionTitle && questionTitle.includes('importance')) {
+                        entries.forEach(entry => {
+                            const entryId = entry[0];
+                            const pokemonName = entry[3] && entry[3][0];
+                            
+                            if (pokemonName && entryId) {
+                                entryIds[pokemonName] = entryId;
+                                pokemonNames.push(pokemonName);
+                            }
+                        });
+                    }
+                });
+                
+                entryIds.pokemon = pokemonNames;
+                return entryIds;
+                
+            } catch (error) {
+                console.error('Error parsing HTML:', error);
+                return null;
+            }
+        }
+
+        function extractSerebii(htmlContent) {
+            // Create a temporary DOM element to parse the HTML
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = htmlContent;
+            
+            const pokemonData = {};
+            
+            // Find all rows in the dextable (skip the header row)
+            const rows = tempDiv.querySelectorAll('table.dextable tr');
+            
+            // Start from index 1 to skip the header row
+            for (let i = 1; i < rows.length; i++) {
+                const row = rows[i];
+                const cells = row.querySelectorAll('td');
+                
+                if (cells.length >= 2) {
+                    // Get the icon image from the first cell
+                    const iconImg = cells[0].querySelector('img');
+                    // Get the name link from the second cell
+                    const nameLink = cells[1].querySelector('a u');
+                    
+                    if (iconImg && nameLink) {
+                        const iconPath = iconImg.getAttribute('src');
+                        const pokemonName = nameLink.textContent.trim();
+                        
+                        // Add to our data object
+                        pokemonData[pokemonName] = iconPath;
+                    }
+                }
+            }
+            
+            return pokemonData;
+        }
+
+        function extractData() {
+            const googleFormHTML = document.getElementById('htmlInput1').value;
+            const serebiiHTML = document.getElementById('htmlInput2').value;
+            const orderingText = document.getElementById('htmlInput3').value.trim();
+            const formURL = document.getElementById('htmlInput4').value.trim();
+
+            if (!googleFormHTML.trim() || !serebiiHTML.trim() || !formURL.trim()) {
+                alert('Please paste content in all required inputs');
+                return null;
+            }
+            
+            try {
+                // Extract entry IDs from Facebook form data
+                const entryIds = extractEntryIdsData(googleFormHTML);
+                if (!entryIds) return null;
+                
+                // Extract icon paths from Serebii data  
+                const iconData = extractSerebii(serebiiHTML);
+                
+                // Create the final result object
+                const result = {
+                    top1: entryIds.top1,
+                    top2: entryIds.top2,
+                    top3: entryIds.top3,
+                    url: formURL,
+                    pokemon: []
+                };
+                
+                // Get the list of pokemon from form data (only these should be included)
+                const formPokemon = new Set(entryIds.pokemon || []);
+                
+                // Get ordering list if provided
+                let pokemonOrder = [];
+                if (orderingText) {
+                    pokemonOrder = orderingText.split('\n')
+                        .map(line => line.trim())
+                        .filter(line => line.length > 0 && formPokemon.has(line)); // Only include pokemon that exist in form
+                }
+                
+                // Find any pokemon from the form that aren't in the ordering list
+                const uncoveredPokemon = Array.from(formPokemon)
+                    .filter(name => !pokemonOrder.includes(name))
+                    .sort(); // Sort alphabetically
+                
+                // Combine: ordered pokemon first, then uncovered pokemon in alpha order
+                const finalOrder = [...pokemonOrder, ...uncoveredPokemon];
+                
+                // Build the pokemon array in the final order
+                finalOrder.forEach(pokemonName => {
+                    const entryId = entryIds[pokemonName];
+                    const iconPath = iconData[pokemonName];
+                    
+                    if (entryId) { // Only include if it exists in form data
+                        if (iconPath) {
+                            // Extract just the filename from the full path
+                            const filename = iconPath.split('/').pop();
+                            result.pokemon.push([pokemonName, entryId, filename]);
+                        } else {
+                            // Include Pokemon even if no icon found, but warn
+                            console.warn(`No icon found for ${pokemonName}`);
+                            result.pokemon.push([pokemonName, entryId, null]);
+                        }
+                    }
+                });
+                
+                console.log('Combined Pokemon data:');
+                console.log(JSON.stringify(result, null, 2));
+                
+                // Compress the data
+                const compressed = LZString.compressToEncodedURIComponent(JSON.stringify(result));
+                console.log('Compressed data:', compressed);
+
+                // Create the URL with compressed data
+                const generatedUrl = `${window.location.origin}${window.location.pathname}#data=${compressed}`;
+                
+                // Show the result area and populate the URL
+                document.getElementById('resultArea').style.display = 'block';
+                document.getElementById('urlOutput').value = generatedUrl;
+                document.getElementById('shortUrlArea').style.display = 'none'; // Hide previous shortened URL
+                
+                // Copy to clipboard if possible
+                if (navigator.clipboard) {
+                    navigator.clipboard.writeText(JSON.stringify(result, null, 2))
+                        .then(() => console.log('Data copied to clipboard!'))
+                        .catch(err => console.log('Could not copy to clipboard:', err));
+                }
+
+                return result;
+                
+            } catch (error) {
+                console.error('Error extracting data:', error);
+                return null;
+            }
+        }
+
+        function copyToClipboard() {
+            const urlOutput = document.getElementById('urlOutput');
+            urlOutput.select();
+            urlOutput.setSelectionRange(0, 99999); // For mobile devices
+            
+            navigator.clipboard.writeText(urlOutput.value).then(() => {
+                alert('URL copied to clipboard!');
+            }).catch(err => {
+                console.error('Could not copy URL: ', err);
+                // Fallback for older browsers
+                document.execCommand('copy');
+                alert('URL copied to clipboard!');
+            });
+        }
+
+        function copyShortUrl() {
+            const shortUrlOutput = document.getElementById('shortUrlOutput');
+            shortUrlOutput.select();
+            shortUrlOutput.setSelectionRange(0, 99999);
+            
+            navigator.clipboard.writeText(shortUrlOutput.value).then(() => {
+                alert('Short URL copied to clipboard!');
+            }).catch(err => {
+                console.error('Could not copy short URL: ', err);
+                document.execCommand('copy');
+                alert('Short URL copied to clipboard!');
+            });
+        }
+
+        function shortenUrl() {
+            const longUrl = document.getElementById('urlOutput').value;
+            
+            if (!longUrl) {
+                alert('No URL to shorten!');
+                return;
+            }
+
+            // Show loading state
+            const shortenButton = event.target;
+            shortenButton.textContent = 'Shortening...';
+            shortenButton.disabled = true;
+
+            // Create unique callback name to avoid conflicts
+            const callbackName = 'shortenCallback_' + Date.now();
+            
+            // Define the callback function
+            window[callbackName] = function(data) {
+                try {
+                    if (data.shorturl) {
+                        // Show the shortened URL
+                        document.getElementById('shortUrlArea').style.display = 'block';
+                        document.getElementById('shortUrlOutput').value = data.shorturl;
+                        console.log('Short URL:', data.shorturl);
+                    } else if (data.errormessage) {
+                        throw new Error(data.errormessage);
+                    } else {
+                        throw new Error('Unknown error from is.gd');
+                    }
+                } catch (error) {
+                    console.error('Error shortening URL:', error);
+                    alert('Failed to shorten URL: ' + error.message);
+                } finally {
+                    // Cleanup
+                    document.head.removeChild(script);
+                    delete window[callbackName];
+                    
+                    // Restore button state
+                    shortenButton.textContent = 'Shorten with is.gd';
+                    shortenButton.disabled = false;
+                }
+            };
+
+            // Create script tag for JSONP request
+            const script = document.createElement('script');
+            script.src = `https://is.gd/create.php?format=json&callback=${callbackName}&url=${encodeURIComponent(longUrl)}`;
+            
+            // Handle script loading errors
+            script.onerror = function() {
+                alert('Failed to connect to is.gd. Please check your internet connection.');
+                document.head.removeChild(script);
+                delete window[callbackName];
+                shortenButton.textContent = 'Shorten with is.gd';
+                shortenButton.disabled = false;
+            };
+            
+            document.head.appendChild(script);
+        }
+    </script>
+</body>
+</html>
