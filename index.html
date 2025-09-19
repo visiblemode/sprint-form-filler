@@ -319,6 +319,60 @@
     // ---------------------------
     const isCoarse = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
 
+    // ----- Mobile auto-scroll while dragging -----
+    let autoScrollRAF = null;
+    let autoScrollDir = 0;     // -1 = up, +1 = down, 0 = none
+    let lastTouchX = 0;
+    let lastTouchY = 0;
+
+    const EDGE_THRESHOLD = 60; // px from top/bottom to start autoscroll
+    const MAX_SPEED = 14;      // px per frame at the very edge (tweak to taste)
+
+    function startAutoScroll() {
+      if (autoScrollRAF !== null) return;
+      const step = () => {
+        if (autoScrollDir !== 0) {
+          // Speed increases the closer you are to the edge
+          let speed = MAX_SPEED;
+
+          window.scrollBy(0, autoScrollDir * speed);
+
+          // While scrolling, keep the tier highlight fresh under the finger
+          const target = document.elementFromPoint(lastTouchX, lastTouchY);
+          const container = target ? target.closest('.tier, .palette') : null;
+          if (container) {
+            if (mobileTargetTier && mobileTargetTier !== container) {
+              mobileTargetTier.classList.remove('targeting');
+            }
+            mobileTargetTier = container;
+            mobileTargetTier.classList.add('targeting');
+          }
+        }
+        autoScrollRAF = requestAnimationFrame(step);
+      };
+      autoScrollRAF = requestAnimationFrame(step);
+    }
+
+    function stopAutoScroll() {
+      autoScrollDir = 0;
+      if (autoScrollRAF !== null) {
+        cancelAnimationFrame(autoScrollRAF);
+        autoScrollRAF = null;
+      }
+    }
+
+    function updateAutoScrollDirection(clientY) {
+      const vh = window.innerHeight;
+      if (clientY < EDGE_THRESHOLD) {
+        autoScrollDir = -1;
+      } else if (clientY > vh - EDGE_THRESHOLD) {
+        autoScrollDir = +1;
+      } else {
+        autoScrollDir = 0;
+      }
+      if (autoScrollDir === 0) stopAutoScroll(); else startAutoScroll();
+    }
+
     let dragState = { draggingEl: null, originContainer: null, ghostEl: null };
     let mobileTargetTier = null;
 
@@ -392,15 +446,20 @@
 
         el.addEventListener('touchmove', (e) => {
           const t = e.touches[0];
+          lastTouchX = t.clientX;
+          lastTouchY = t.clientY;
+
           const dx = Math.abs(t.clientX - startX), dy = Math.abs(t.clientY - startY);
           if (dx + dy > 8) moved = true;
 
-          // Tier-wide targeting: highlight entire tier, append on drop
+          // Edge-based auto scroll
+          updateAutoScrollDirection(t.clientY);
+
+          // Tier-wide targeting: highlight entire tier, append on drop (unless same tier)
           const target = document.elementFromPoint(t.clientX, t.clientY);
           const container = target ? target.closest('.tier, .palette') : null;
           if (!container) return;
 
-          // update highlighting
           if (mobileTargetTier && mobileTargetTier !== container) {
             mobileTargetTier.classList.remove('targeting');
           }
@@ -410,6 +469,7 @@
 
         el.addEventListener('touchend', (e) => {
           el.style.opacity = '';
+          stopAutoScroll(); // <<< stop autoscroll when finishing
 
           // If we barely moved, this is a tap: toggle selection
           if (!moved) {
@@ -417,7 +477,6 @@
             if (selectedIcon) selectedIcon.classList.remove('selected');
             selectedIcon = el;
             el.classList.add('selected');
-            // inject controls right under this tier
             const tier = el.parentElement;
             tier.after(mobileControls);
             mobileControls.classList.remove('hidden');
@@ -436,10 +495,24 @@
           dragState.draggingEl = null;
           dragState.originContainer = null;
 
-          clearSelection(); // dropping clears selection
+          clearSelection();
           updateTierHeadersAndCaps(); savePlacements();
+
+          stopAutoScroll(); // <<< extra safety
         });
       }
+
+        el.addEventListener('touchcancel', () => {
+            el.style.opacity = '';
+            stopAutoScroll();
+            if (mobileTargetTier) mobileTargetTier.classList.remove('targeting');
+            mobileTargetTier = null;
+            dragState.draggingEl = null;
+            dragState.originContainer = null;
+            clearSelection();
+            updateTierHeadersAndCaps();
+        }, {passive:true});
+
 
       return el;
     }
