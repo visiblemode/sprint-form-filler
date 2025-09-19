@@ -1,646 +1,506 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mathcord Sprint Tier Maker</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+  <meta charset="utf-8" />
+  <title>Sprint Tier Filler</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- Dependency per spec -->
+  <script src="lz-string.min.js"></script>
+  <!-- Optional fallback if local file missing -->
+  <script>
+    (function ensureLZ(){
+      if (!window.LZString) {
+        var s = document.createElement('script');
+        s.src = "https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js";
+        document.head.appendChild(s);
+      }
+    })();
+  </script>
+  <style>
+    :root{
+      /* Pastels on dark */
+      --pastel-red:    rgba(255, 107, 129, 0.28);
+      --pastel-yellow: rgba(255, 221,  87, 0.28);
+      --pastel-green:  rgba( 46, 204, 113, 0.28);
+      --pastel-teal:   rgba( 26, 188, 156, 0.28);
+      --pastel-grey:   rgba(200, 200, 200, 0.22);
 
-        body {
-            font-family: Arial, sans-serif;
-            background: #1a1a1a;
-            color: white;
-            overflow-x: hidden;
-            padding-bottom: 140px; /* Space for fixed carousel */
-        }
+      /* Overcap */
+      --overcap-fill:  rgba(220, 53, 69, 0.35); /* firmer red */
+      --overcap-border:#dc3545;                  /* strong red */
 
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-        }
+      /* Neutrals (dark theme) */
+      --bg: #000;
+      --text: #e9e9e9;
+      --muted: #bbb;
+      --border: #444;
+      --tile-bg: #111;
+      --tile-border: #555;
+      --ghost-line: #888;
+    }
 
-        .tier-list {
-            margin-bottom: 20px;
-        }
+    /* Base */
+    html, body { background: var(--bg); color: var(--text); }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 12px; }
+    h2 { margin: 12px 0 6px; font-size: 1rem; color: #fff; }
+    .app { display: grid; gap: 16px; }
 
-        .tier {
-            display: flex;
-            min-height: 100px;
-            margin-bottom: 2px;
-            border: 2px solid #333;
-        }
+    .tip { color: var(--muted); font-size: 0.95rem; }
 
-        .tier-label {
-            width: 140px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            font-size: 18px;
-            color: black;
-            flex-shrink: 0;
-        }
+    .row { display: grid; gap: 8px; }
+    .row-head { display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; }
+    .row-head .live { font-weight:600; }
+    .row-head .count { font-variant-numeric: tabular-nums; }
+    .row-head .count.over { color: var(--overcap-border); } /* just the X turns red */
 
-        .tier-content {
-            flex: 1;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 5px;
-            padding: 10px;
-            background: #2a2a2a;
-            min-height: 100px;
-            align-items: flex-start;
-            align-content: flex-start;
-            position: relative;
-        }
+    /* Containers */
+    .palette, .tier {
+      border: 1.5px dashed var(--border);
+      padding: 8px;
+      min-height: 64px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      gap: 6px;
+      position: relative;
+      border-radius: 10px;
+      /* ensure inner content respects the rounded corners when backgrounds touch edges */
+      overflow: hidden;
+      color: #fff; /* white text on tier labels/headers area */
+    }
 
-        .tier-content.drag-over {
-            background: #3a3a3a;
-            border: 2px dashed #666;
-        }
+    /* Tier background colors (pastels on dark) */
+    #tier-top3 { background: var(--pastel-red); }
+    #tier-high { background: var(--pastel-yellow); }
+    #tier-mid  { background: var(--pastel-green); }
+    #tier-low  { background: var(--pastel-teal); }
+    #tier-ni   { background: var(--pastel-grey); }
 
-        .insertion-indicator {
-            width: 3px;
-            height: 60px;
-            background: #4CAF50;
-            border-radius: 2px;
-            position: absolute;
-            z-index: 50;
-            pointer-events: none;
-            box-shadow: 0 0 8px rgba(76, 175, 80, 0.6);
-        }
+    /* Palette stays neutral but dark */
+    .palette { background: rgba(255,255,255,0.04); }
 
-        .top3 { background: #ff6b6b; }
-        .high { background: #ffd93d; }
-        .mid { background: #6bcf7f; }
-        .low { background: #4ecdc4; }
-        .not-interested { background: #95a5a6; }
+    /* Overcap visuals */
+    .overcap {
+      background: var(--overcap-fill) !important;
+      border-color: var(--overcap-border) !important;
+      border-width: 2.5px !important; /* thicker dashed border */
+    }
 
-        .icon-container {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: #333;
-            padding: 15px 20px 20px 20px;
-            border-top: 3px solid #555;
-            z-index: 100;
-            box-shadow: 0 -5px 15px rgba(0,0,0,0.3);
-        }
+    /* Icon tiles (rounded & clipped) */
+    .icon {
+      width: 56px; height: 56px;
+      border: 1px solid var(--tile-border);
+      border-radius: 10px;
+      background: var(--tile-bg) center/contain no-repeat;
+      display: inline-flex; align-items: center; justify-content: center;
+      cursor: grab; user-select: none; touch-action: none; position: relative;
+      overflow: hidden; /* critical: clip image to rounded corners */
+    }
+    .icon:active { cursor: grabbing; }
+    .icon img {
+      width: 100%; height: 100%; object-fit: contain; pointer-events: none;
+      display: block;
+      border-radius: inherit; /* keep image corner rounding consistent */
+    }
 
-        .icon-container h3 {
-            margin-bottom: 15px;
-            text-align: center;
-        }
+    /* Drag ghost (visible on dark) */
+    .ghost {
+      width: 56px; height: 56px;
+      outline: 2px solid var(--ghost-line);
+      outline-offset: -2px; border-radius: 10px;
+      background: repeating-linear-gradient(
+        45deg,
+        rgba(255,255,255,0.09), rgba(255,255,255,0.09) 6px,
+        rgba(255,255,255,0.04) 6px, rgba(255,255,255,0.04) 12px
+      );
+    }
 
-        .icons-grid {
-            display: flex;
-            overflow-x: auto;
-            flex-wrap: nowrap;
-            gap: 10px;
-            justify-content: flex-start;
-            padding: 5px 10px;
-        }
-
-        .icon {
-            width: 80px;
-            height: 80px;
-            background-size: cover;
-            background-position: center;
-            border-radius: 10px;
-            cursor: grab;
-            transition: transform 0.2s, box-shadow 0.2s;
-            flex-shrink: 0;
-        }
-
-        .icon:hover {
-            transform: scale(1.05);
-            box-shadow: inset 0 0 0 2px #fff;
-        }
-
-        .icon.dragging {
-            opacity: 0.5;
-            transform: rotate(5deg);
-        }
-
-        .icon.in-tier {
-            width: 60px;
-            height: 60px;
-        }
-
-        .generate-btn {
-            display: block;
-            margin: 30px auto 20px auto;
-            padding: 15px 30px;
-            background: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            font-size: 18px;
-            cursor: pointer;
-            transition: background 0.3s;
-        }
-
-        .generate-btn:hover {
-            background: #45a049;
-        }
-
-        /* Mobile styles */
-        @media (max-width: 768px) {
-            body {
-                padding-bottom: 120px; /* Smaller space for mobile */
-            }
-            
-            .tier-label {
-                width: 100px;
-                font-size: 12px;
-                text-align: center;
-            }
-            
-            .tier-content {
-                min-height: 80px;
-            }
-            
-            .icon-container {
-                padding: 10px 15px;
-            }
-            
-            .icon-container h3 {
-                font-size: 14px;
-                margin-bottom: 10px;
-            }
-            
-            .icons-grid {
-                padding-bottom: 5px;
-            }
-            
-            .icon {
-                flex-shrink: 0;
-                width: 60px;
-                height: 60px;
-            }
-            
-            .icon.in-tier {
-                width: 45px;
-                height: 45px;
-            }
-        }
-
-        /* Scrollbar styling for carousel */
-        .icons-grid::-webkit-scrollbar {
-            height: 6px;
-        }
-
-        .icons-grid::-webkit-scrollbar-track {
-            background: #444;
-            border-radius: 3px;
-        }
-
-        .icons-grid::-webkit-scrollbar-thumb {
-            background: #666;
-            border-radius: 3px;
-        }
-
-        .icons-grid::-webkit-scrollbar-thumb:hover {
-            background: #777;
-        }
-    </style>
+    .controls { display:flex; gap:8px; align-items:center; flex-wrap: wrap; }
+    button {
+      padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border);
+      background: #111; color: var(--text);
+    }
+    button:hover { filter: brightness(1.1); }
+    .small { font-size: 0.9rem; color: var(--muted); }
+  </style>
 </head>
 <body>
-    <div class="container">        
-        <div class="tier-list">
-            <div class="tier">
-                <div class="tier-label top3">Top 3</div>
-                <div class="tier-content" data-tier="top3"></div>
-            </div>
-            
-            <div class="tier">
-                <div class="tier-label high">High</div>
-                <div class="tier-content" data-tier="high"></div>
-            </div>
-            
-            <div class="tier">
-                <div class="tier-label mid">Mid</div>
-                <div class="tier-content" data-tier="mid"></div>
-            </div>
-            
-            <div class="tier">
-                <div class="tier-label low">Low</div>
-                <div class="tier-content" data-tier="low"></div>
-            </div>
-            
-            <div class="tier">
-                <div class="tier-label not-interested">Not Interested</div>
-                <div class="tier-content" data-tier="not-interested"></div>
-            </div>
-        </div>
-
-        <div class="icon-container">
-            <h3>Drag items up into tiers ↑</h3>
-            <div class="icons-grid" id="iconsGrid"></div>
-        </div>
-
-        <button class="generate-btn" onclick="generateTierList()">Fill Google Form</button>
+  <div class="app">
+    <!-- Tip stays at top -->
+    <div class="tip">
+      Drag items into tiers. Over-cap rows turn light red. Palette items are treated as Not Interested (not submitted).
     </div>
 
-    <script language="javascript" src="lz-string.min.js"></script>
-    <script>
+    <!-- Tiers -->
+    <section class="row">
+      <div class="row-head">
+        <h2>Top 3 (<span class="live">Current: <span id="cnt-top3" class="count">0</span>/3</span>)</h2>
+      </div>
+      <div id="tier-top3" class="tier" data-tier="top3" data-max="3" aria-label="Top 3"></div>
+    </section>
 
-        function getParam(name) {
-            // Prefer hash for privacy: #data=...
-            const hash = new URLSearchParams(location.hash.slice(1));
+    <section class="row">
+      <div class="row-head">
+        <h2>High (<span class="live">Current: <span id="cnt-high" class="count">0</span>/5</span>)</h2>
+      </div>
+      <div id="tier-high" class="tier" data-tier="high" data-max="5" aria-label="High"></div>
+    </section>
 
-            console.log(hash)
-            if (hash.has(name)) return hash.get(name);
-            // Fallback to query: ?data=...
-            const qs = new URLSearchParams(location.search);
+    <section class="row">
+      <div class="row-head">
+        <h2>Mid (<span class="live">Current: <span id="cnt-mid" class="count">0</span>/10</span>)</h2>
+      </div>
+      <div id="tier-mid" class="tier" data-tier="mid" data-max="10" aria-label="Mid"></div>
+    </section>
 
-            console.log('qs', qs)
-            return qs.get(name);
+    <section class="row">
+      <div class="row-head">
+        <h2>Low (<span class="live">Current: <span id="cnt-low" class="count">0</span>/15</span>)</h2>
+      </div>
+      <div id="tier-low" class="tier" data-tier="low" data-max="15" aria-label="Low"></div>
+    </section>
+
+    <section class="row">
+      <div class="row-head">
+        <h2>Not Interested</h2>
+      </div>
+      <div id="tier-ni" class="tier" data-tier="ni" aria-label="Not Interested"></div>
+    </section>
+
+    <!-- Controls + Palette below tiers -->
+    <section class="row">
+      <div class="controls">
+        <button id="fillBtn">Fill Google Form</button>
+        <button id="resetBtn" title="Move all items back to the palette">Reset</button>
+        <span class="small">Palette is below — items left here are not submitted.</span>
+      </div>
+      <div class="row-head">
+        <h2>Palette</h2>
+      </div>
+      <div id="palette" class="palette" data-tier="palette" aria-label="Palette"></div>
+    </section>
+  </div>
+
+  <script>
+    // ---------------------------
+    // Helpers
+    // ---------------------------
+    function alertWithContact(msg) {
+      alert(msg + "\n\nPlease notify @dovemm on Discord about this error");
+    }
+    function alertSimple(msg) { alert(msg); } // for overfill only
+
+    function getParam(name) {
+      const fromHash = new URLSearchParams((location.hash || "").replace(/^#/, ""));
+      if (fromHash.has(name)) return fromHash.get(name);
+      const fromQuery = new URLSearchParams(location.search);
+      if (fromQuery.has(name)) return fromQuery.get(name);
+      return null;
+    }
+
+    function convertToIconData(parsed) {
+      if (!Array.isArray(parsed.pokemon)) throw new Error("`pokemon` must be an array");
+      return parsed.pokemon.map(item => {
+        if (!Array.isArray(item) || item.length < 3) {
+          throw new Error("Each pokemon item must be [displayName, entryId, imageFile]");
         }
+        const [displayName, entryId, imageFile] = item;
+        const imgUrl = `https://www.serebii.net/pokemonsleep/pokemon/icon/${imageFile}`;
+        return { name: displayName, entryId, imgUrl };
+      });
+    }
 
-        const enc = getParam('data');
-        let iconData = {};
-        let dataObject = {};
-        if (!enc) {
-            alert('No data parameter found.');
-        } else {
-            try {
-                const json = LZString.decompressFromEncodedURIComponent(enc);
-                const jsonObject = JSON.parse(json);
-                console.log("?", json)
-                dataObject = jsonObject;
-                iconData = convertToIconData(jsonObject);
-            } catch (e) {
-                alert('Failed to decode data: ' + e.message);
-            }
+    function findInsertionPoint(container, clientX) {
+      const children = Array.from(container.querySelectorAll('.icon'));
+      let closest = null, closestOffset = Number.POSITIVE_INFINITY;
+      for (const child of children) {
+        const rect = child.getBoundingClientRect();
+        const mid = rect.left + rect.width / 2;
+        const offset = clientX - mid;
+        if (offset < 0 && Math.abs(offset) < closestOffset) {
+          closestOffset = Math.abs(offset);
+          closest = child;
         }
+      }
+      return closest; // null => append
+    }
 
-        function convertToIconData(data) {
-            console.log("her;", data.pokemon)
-            if (!data || !Array.isArray(data.pokemon)) {
-                throw new Error("Invalid data format: expected an object with a 'pokemon' array");
-            }
+    function tierElements() {
+      return {
+        palette: document.getElementById('palette'),
+        top3: document.getElementById('tier-top3'),
+        high: document.getElementById('tier-high'),
+        mid: document.getElementById('tier-mid'),
+        low: document.getElementById('tier-low'),
+        ni: document.getElementById('tier-ni'),
+      };
+    }
 
-            return data.pokemon.map(([name, _num, imageUrl]) => {
-                return {
-                    id: name,
-                    // id: name.replace(/[^a-z0-9]+/g, ""), // lowercase, strip spaces/punct
-                    url: `https://www.serebii.net/pokemonsleep/pokemon/icon/${imageUrl}`
-                };
+    function headerSpans() {
+      return {
+        top3: document.getElementById('cnt-top3'),
+        high: document.getElementById('cnt-high'),
+        mid:  document.getElementById('cnt-mid'),
+        low:  document.getElementById('cnt-low'),
+      };
+    }
+
+    function updateTierHeadersAndCaps() {
+      const tiers = document.querySelectorAll('.tier');
+      const hdr = headerSpans();
+      tiers.forEach(tier => {
+        const cap = tier.dataset.max ? parseInt(tier.dataset.max, 10) : null;
+        const count = tier.querySelectorAll('.icon').length;
+        if (cap && count > cap) tier.classList.add('overcap'); else tier.classList.remove('overcap');
+        const key = tier.dataset.tier;
+        if (hdr[key]) {
+          hdr[key].textContent = String(count);
+          if (cap && count > cap) hdr[key].classList.add('over'); else hdr[key].classList.remove('over');
+        }
+      });
+    }
+
+    function anyTierOverCap() {
+      const tiers = document.querySelectorAll('.tier');
+      for (const tier of tiers) {
+        const cap = tier.dataset.max ? parseInt(tier.dataset.max, 10) : null;
+        const count = tier.querySelectorAll('.icon').length;
+        if (cap && count > cap) return true;
+      }
+      return false;
+    }
+
+    // ---------------------------
+    // Persistence
+    // ---------------------------
+    const STORAGE_KEY = "stf-placements-v1";
+    function savePlacements() {
+      const { top3, high, mid, low, ni } = tierElements();
+      const getNames = el => Array.from(el.querySelectorAll('.icon')).map(i => i.dataset.id);
+      const data = {
+        top3: getNames(top3),
+        high: getNames(high),
+        mid:  getNames(mid),
+        low:  getNames(low),
+        ni:   getNames(ni),
+      };
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
+      catch(e){ console.warn("Failed to save placements:", e); }
+    }
+    function loadPlacements() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return null;
+        return JSON.parse(raw);
+      } catch(e) {
+        console.warn("Failed to load placements:", e);
+        return null;
+      }
+    }
+    function clearPlacements() {
+      try { localStorage.removeItem(STORAGE_KEY); } catch(e){}
+    }
+
+    // ---------------------------
+    // Drag & Drop + Touch
+    // ---------------------------
+    let dragState = { draggingEl: null, originContainer: null, ghostEl: null };
+
+    function makeIconEl(item) {
+      const el = document.createElement('div');
+      el.className = 'icon'; el.draggable = true;
+      el.dataset.id = item.name; el.dataset.entryId = item.entryId;
+      el.setAttribute('aria-label', item.name);
+      const img = document.createElement('img');
+      img.alt = item.name; img.src = item.imgUrl;
+      el.appendChild(img);
+
+      // Desktop
+      el.addEventListener('dragstart', (e) => {
+        dragState.draggingEl = el;
+        dragState.originContainer = el.parentElement;
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData('text/plain', el.dataset.id);
+        requestAnimationFrame(()=>{ el.style.opacity = '0.5'; });
+      });
+      el.addEventListener('dragend', () => {
+        el.style.opacity = '';
+        dragState.draggingEl = null; dragState.originContainer = null;
+        if (dragState.ghostEl) { dragState.ghostEl.remove(); dragState.ghostEl = null; }
+        updateTierHeadersAndCaps(); savePlacements();
+      });
+
+      // Touch
+      el.addEventListener('touchstart', () => {
+        dragState.draggingEl = el;
+        dragState.originContainer = el.parentElement;
+        el.style.opacity = '0.6';
+      }, {passive:true});
+      el.addEventListener('touchmove', (e) => {
+        const t = e.touches[0];
+        const target = document.elementFromPoint(t.clientX, t.clientY);
+        const container = target ? target.closest('.tier, .palette') : null;
+        if (!container) return;
+        if (!dragState.ghostEl) {
+          dragState.ghostEl = document.createElement('div');
+          dragState.ghostEl.className = 'ghost';
+        }
+        const before = findInsertionPoint(container, t.clientX);
+        if (before) container.insertBefore(dragState.ghostEl, before);
+        else container.appendChild(dragState.ghostEl);
+      }, {passive:false});
+      el.addEventListener('touchend', () => {
+        el.style.opacity = '';
+        const ghost = dragState.ghostEl;
+        if (ghost && ghost.parentElement) {
+          ghost.parentElement.insertBefore(el, ghost);
+        }
+        if (ghost) ghost.remove();
+        dragState.ghostEl = null; dragState.draggingEl = null; dragState.originContainer = null;
+        updateTierHeadersAndCaps(); savePlacements();
+      });
+
+      return el;
+    }
+
+    function setupDragAndDrop() {
+      const droppables = document.querySelectorAll('.palette, .tier');
+      droppables.forEach(container => {
+        container.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          const dragging = dragState.draggingEl; if (!dragging) return;
+          if (!dragState.ghostEl) {
+            dragState.ghostEl = document.createElement('div');
+            dragState.ghostEl.className = 'ghost';
+          }
+          const before = findInsertionPoint(container, e.clientX);
+          if (before) container.insertBefore(dragState.ghostEl, before);
+          else container.appendChild(dragState.ghostEl);
+        });
+        container.addEventListener('drop', (e) => {
+          e.preventDefault();
+          const dragging = dragState.draggingEl; if (!dragging) return;
+          const ghost = dragState.ghostEl;
+          if (ghost && ghost.parentElement === container) {
+            container.insertBefore(dragging, ghost);
+            ghost.remove(); dragState.ghostEl = null;
+          } else {
+            container.appendChild(dragging);
+          }
+          updateTierHeadersAndCaps(); savePlacements();
+        });
+      });
+    }
+
+    // ---------------------------
+    // Generation Logic (direct per-tier)
+    // ---------------------------
+    function generatePrefill(parsed, iconData) {
+      if (anyTierOverCap()) {
+        alertSimple("One or more rows exceed their maximum. Please adjust before generating.");
+        return;
+      }
+      const { top3: top3El, high: highEl, mid: midEl, low: lowEl } = tierElements();
+      const getNames = el => Array.from(el.querySelectorAll('.icon')).map(i => i.dataset.id);
+
+      const top3Names = getNames(top3El);
+      const highNames = getNames(highEl);
+      const midNames  = getNames(midEl);
+      const lowNames  = getNames(lowEl);
+
+      const nameToEntry = new Map(iconData.map(o => [o.name, o.entryId]));
+      const params = new URLSearchParams();
+      params.set('usp', 'pp_url');
+
+      if (parsed.top1 && top3Names[0]) params.set(`entry.${parsed.top1}`, top3Names[0]);
+      if (parsed.top2 && top3Names[1]) params.set(`entry.${parsed.top2}`, top3Names[1]);
+      if (parsed.top3 && top3Names[2]) params.set(`entry.${parsed.top3}`, top3Names[2]);
+
+      for (const n of highNames) { const id = nameToEntry.get(n); if (id) params.append(`entry.${id}`, "high (5max)"); }
+      for (const n of midNames)  { const id = nameToEntry.get(n); if (id) params.append(`entry.${id}`, "medium (10max)"); }
+      for (const n of lowNames)  { const id = nameToEntry.get(n); if (id) params.append(`entry.${id}`, "low (15max)"); }
+
+      const base = parsed.url;
+      if (!base) { alertWithContact("Missing form base `url` in data."); return; }
+      const theLink = `${base}?${params.toString()}`;
+      console.log("Prefill URL:", theLink);
+      window.open(theLink, "_blank");
+    }
+
+    // ---------------------------
+    // Reset
+    // ---------------------------
+    function resetAllToPalette() {
+      const ok = confirm("Reset all placements and move all items back to the palette?");
+      if (!ok) return;
+      const { palette, top3, high, mid, low, ni } = tierElements();
+      const allPlaced = [top3, high, mid, low, ni]
+        .flatMap(el => Array.from(el.querySelectorAll('.icon')));
+      allPlaced.forEach(icon => palette.appendChild(icon));
+      clearPlacements();
+      updateTierHeadersAndCaps();
+    }
+
+    // ---------------------------
+    // Boot
+    // ---------------------------
+    (function init() {
+      try {
+        const dataParam = getParam('data');
+        if (!dataParam) { alertWithContact("No data parameter found."); return; }
+
+        function proceedWhenLZReady() {
+          if (!window.LZString) { setTimeout(proceedWhenLZReady, 20); return; }
+          try {
+            const json = LZString.decompressFromEncodedURIComponent(dataParam);
+            if (!json) throw new Error("Decompression produced empty result");
+            const parsed = JSON.parse(json);
+
+            const icons = convertToIconData(parsed);
+            const { palette, top3, high, mid, low, ni } = tierElements();
+
+            // Render all icons to palette
+            const byName = new Map();
+            icons.forEach(item => {
+              const el = makeIconEl(item);
+              palette.appendChild(el);
+              byName.set(item.name, el);
             });
-        }
 
-        let draggedElement = null;
-        let touchOffset = { x: 0, y: 0 };
+            // Restore placements
+            const saved = loadPlacements();
+            if (saved) {
+              const apply = (arr, container) => (arr || []).forEach(name => {
+                const el = byName.get(name); if (el) container.appendChild(el);
+              });
+              apply(saved.top3, top3);
+              apply(saved.high, high);
+              apply(saved.mid,  mid);
+              apply(saved.low,  low);
+              apply(saved.ni,   ni);
+            }
 
-        // Initialize the app
-        function init() {
-            loadIcons();
+            updateTierHeadersAndCaps();
             setupDragAndDrop();
-        }
 
-        // Load icons from "external" JSON
-        function loadIcons() {
-            const iconsGrid = document.getElementById('iconsGrid');
-            
-            iconData.forEach(item => {
-                const iconElement = document.createElement('div');
-                iconElement.className = 'icon';
-                iconElement.draggable = true;
-                iconElement.dataset.id = item.id;
-                iconElement.style.backgroundImage = `url(${item.url})`;
-                
-                iconsGrid.appendChild(iconElement);
+            document.getElementById('fillBtn').addEventListener('click', () => {
+              try { generatePrefill(parsed, icons); }
+              catch(e){ console.error(e); alertWithContact("Failed to generate prefill URL: " + e.message); }
             });
+            document.getElementById('resetBtn').addEventListener('click', resetAllToPalette);
+
+          } catch (e) {
+            console.error(e);
+            alertWithContact("Failed to decode data: " + e.message);
+          }
         }
+        proceedWhenLZReady();
 
-        // Setup drag and drop for both desktop and mobile
-        function setupDragAndDrop() {
-            const icons = document.querySelectorAll('.icon');
-            const tierContents = document.querySelectorAll('.tier-content');
-
-            // Desktop drag and drop
-            icons.forEach(icon => {
-                icon.addEventListener('dragstart', handleDragStart);
-                icon.addEventListener('dragend', handleDragEnd);
-                
-                // Mobile touch events
-                icon.addEventListener('touchstart', handleTouchStart, { passive: false });
-                icon.addEventListener('touchmove', handleTouchMove, { passive: false });
-                icon.addEventListener('touchend', handleTouchEnd, { passive: false });
-            });
-
-            tierContents.forEach(tier => {
-                tier.addEventListener('dragover', handleDragOver);
-                tier.addEventListener('drop', handleDrop);
-                tier.addEventListener('dragenter', handleDragEnter);
-                tier.addEventListener('dragleave', handleDragLeave);
-            });
-        }
-
-        // Desktop drag handlers
-        function handleDragStart(e) {
-            draggedElement = e.target;
-            e.target.classList.add('dragging');
-            e.dataTransfer.effectAllowed = 'move';
-        }
-
-        function handleDragEnd(e) {
-            e.target.classList.remove('dragging');
-            draggedElement = null;
-        }
-
-        function handleDragOver(e) {
-            e.preventDefault();
-            e.dataTransfer.dropEffect = 'move';
-            
-            const tierContent = e.target.closest('.tier-content');
-            if (tierContent) {
-                showInsertionIndicator(tierContent, e.clientX);
-            }
-        }
-
-        function handleDragEnter(e) {
-            e.preventDefault();
-            const tierContent = e.target.closest('.tier-content');
-            if (tierContent) {
-                tierContent.classList.add('drag-over');
-            }
-        }
-
-        function handleDragLeave(e) {
-            const tierContent = e.target.closest('.tier-content');
-            if (tierContent && !tierContent.contains(e.relatedTarget)) {
-                tierContent.classList.remove('drag-over');
-                hideInsertionIndicator();
-            }
-        }
-
-        function handleDrop(e) {
-            e.preventDefault();
-            const tierContent = e.target.closest('.tier-content');
-            if (tierContent) {
-                tierContent.classList.remove('drag-over');
-            }
-            hideInsertionIndicator();
-            
-            if (draggedElement && tierContent) {
-                const insertionPoint = findInsertionPoint(tierContent, e.clientX);
-                moveIconToTier(draggedElement, tierContent, insertionPoint);
-            }
-        }
-
-        function handleDragEnd(e) {
-            e.target.classList.remove('dragging');
-            hideInsertionIndicator();
-            draggedElement = null;
-        }
-
-        // Visual insertion indicator functions
-        function showInsertionIndicator(tierContent, clientX) {
-            hideInsertionIndicator(); // Remove any existing indicator
-            
-            const insertionPoint = findInsertionPoint(tierContent, clientX);
-            const indicator = document.createElement('div');
-            indicator.className = 'insertion-indicator';
-            indicator.id = 'insertion-indicator';
-            
-            if (insertionPoint) {
-                const rect = insertionPoint.getBoundingClientRect();
-                const tierRect = tierContent.getBoundingClientRect();
-                indicator.style.left = (rect.left - tierRect.left - 2) + 'px';
-                indicator.style.top = '20px';
-            } else {
-                // Insert at the end
-                const icons = tierContent.querySelectorAll('.icon');
-                if (icons.length > 0) {
-                    const lastIcon = icons[icons.length - 1];
-                    const rect = lastIcon.getBoundingClientRect();
-                    const tierRect = tierContent.getBoundingClientRect();
-                    indicator.style.left = (rect.right - tierRect.left + 3) + 'px';
-                    indicator.style.top = '20px';
-                } else {
-                    indicator.style.left = '10px';
-                    indicator.style.top = '20px';
-                }
-            }
-            
-            tierContent.style.position = 'relative';
-            tierContent.appendChild(indicator);
-        }
-
-        function hideInsertionIndicator() {
-            const indicator = document.getElementById('insertion-indicator');
-            if (indicator) {
-                indicator.remove();
-            }
-        }
-
-        // Mobile touch handlers
-        function handleTouchStart(e) {
-            e.preventDefault();
-            draggedElement = e.target;
-            e.target.classList.add('dragging');
-            
-            const touch = e.touches[0];
-            const rect = e.target.getBoundingClientRect();
-            touchOffset.x = touch.clientX - rect.left;
-            touchOffset.y = touch.clientY - rect.top;
-        }
-
-        function handleTouchEnd(e) {
-            e.preventDefault();
-            if (!draggedElement) return;
-
-            const touch = e.changedTouches[0];
-            const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
-            const tierContent = elementBelow ? elementBelow.closest('.tier-content') : null;
-
-            // Reset styles
-            draggedElement.style.position = '';
-            draggedElement.style.zIndex = '';
-            draggedElement.style.left = '';
-            draggedElement.style.top = '';
-            draggedElement.style.pointerEvents = '';
-            draggedElement.classList.remove('dragging');
-            hideInsertionIndicator();
-
-            if (tierContent) {
-                const insertionPoint = findInsertionPoint(tierContent, touch.clientX);
-                moveIconToTier(draggedElement, tierContent, insertionPoint);
-            }
-
-            draggedElement = null;
-        }
-
-        function handleTouchMove(e) {
-            e.preventDefault();
-            if (!draggedElement) return;
-
-            const touch = e.touches[0];
-            draggedElement.style.position = 'fixed';
-            draggedElement.style.zIndex = '1000';
-            draggedElement.style.left = (touch.clientX - touchOffset.x) + 'px';
-            draggedElement.style.top = (touch.clientY - touchOffset.y) + 'px';
-            draggedElement.style.pointerEvents = 'none';
-
-            // Show insertion indicator for mobile too
-            const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
-            const tierContent = elementBelow ? elementBelow.closest('.tier-content') : null;
-            if (tierContent) {
-                showInsertionIndicator(tierContent, touch.clientX);
-            } else {
-                hideInsertionIndicator();
-            }
-        }
-
-        // Move icon to tier with proper positioning
-        function moveIconToTier(icon, tierContent, insertPosition = null) {
-            icon.classList.add('in-tier');
-            
-            if (insertPosition) {
-                // Insert before the specified position
-                tierContent.insertBefore(icon, insertPosition);
-            } else {
-                // Just append to the end
-                tierContent.appendChild(icon);
-            }
-            // Re-setup event listeners for the moved icon
-            icon.removeEventListener('dragstart', handleDragStart);
-            icon.removeEventListener('dragend', handleDragEnd);
-            icon.removeEventListener('touchstart', handleTouchStart);
-            icon.removeEventListener('touchmove', handleTouchMove);
-            icon.removeEventListener('touchend', handleTouchEnd);
-            
-            icon.addEventListener('dragstart', handleDragStart);
-            icon.addEventListener('dragend', handleDragEnd);
-            icon.addEventListener('touchstart', handleTouchStart, { passive: false });
-            icon.addEventListener('touchmove', handleTouchMove, { passive: false });
-            icon.addEventListener('touchend', handleTouchEnd, { passive: false });
-        }
-
-        // Find the best insertion point in a tier
-        function findInsertionPoint(tierContent, clientX) {
-            const icons = Array.from(tierContent.querySelectorAll('.icon'));
-            
-            if (icons.length === 0) {
-                return null; // Empty tier, just append
-            }
-
-            for (let i = 0; i < icons.length; i++) {
-                const rect = icons[i].getBoundingClientRect();
-                const iconCenterX = rect.left + rect.width / 2;
-                
-                if (clientX < iconCenterX) {
-                    return icons[i]; // Insert before this icon
-                }
-            }
-            
-            return null; // Insert at the end
-        }
-
-        // Generate tier list and print to console
-        function generateTierList() {
-            const tierList = {
-                'top3': [],
-                'high': [],
-                'mid': [],
-                'low': [],
-                'not-interested': []
-            };
-
-            // Get items in each tier
-            document.querySelectorAll('.tier-content').forEach(tierContent => {
-                const tierName = tierContent.dataset.tier;
-                const icons = tierContent.querySelectorAll('.icon');
-                
-                icons.forEach(icon => {
-                    tierList[tierName].push(icon.dataset.id);
-                });
-            });
-
-            // Add items still in the icons grid to "not-interested"
-            const iconsGrid = document.getElementById('iconsGrid');
-            const remainingIcons = iconsGrid.querySelectorAll('.icon');
-            remainingIcons.forEach(icon => {
-                tierList['not-interested'].push(icon.dataset.id);
-            });
-
-            // Gather all Pokemon in the specified order with limits
-            const allPokemon = [
-                ...tierList['top3'],
-                ...tierList['high'],
-                ...tierList['mid'],
-                ...tierList['low']
-            ];
-
-            const tierData = {
-                'top3': allPokemon.slice(0, 3),
-                'high': allPokemon.slice(3, 8),
-                'mid': allPokemon.slice(8, 18),
-                'low': allPokemon.slice(18, 33),
-            }
-
-            // Get the base URL from iconData
-            const baseUrl = dataObject.url;
-            
-            // Get top 3 entry IDs
-            const top1Id = dataObject.top1;
-            const top2Id = dataObject.top2;
-            const top3Id = dataObject.top3;
-            
-            // Create a lookup map for pokemon name -> entry ID
-            const pokemonToEntryId = {};
-            dataObject.pokemon.forEach(([name, entryId, imageFile]) => {
-                pokemonToEntryId[name] = entryId;
-            });
-            
-            // Build URL parameters
-            const params = new URLSearchParams();
-            params.append('usp', 'pp_url');
-            
-            // Handle top 3 (fill specific entry fields)
-            const top3List = tierData.top3 || [];
-            if (top3List[0]) params.append(`entry.${top1Id}`, top3List[0]);
-            if (top3List[1]) params.append(`entry.${top2Id}`, top3List[1]);
-            if (top3List[2]) params.append(`entry.${top3Id}`, top3List[2]);
-            
-            // Handle other tiers - map tier names to their labels
-            const tierLabels = {
-                'high': 'high (5max)',
-                'mid': 'medium (10max)', 
-                'low': 'low (15max)'
-            };
-            
-            // Process each tier
-            Object.keys(tierLabels).forEach(tierName => {
-                const pokemonList = tierData[tierName] || [];
-                const tierLabel = tierLabels[tierName];
-                
-                pokemonList.forEach(pokemonName => {
-                    const entryId = pokemonToEntryId[pokemonName];
-                    if (entryId) {
-                        params.append(`entry.${entryId}`, tierLabel);
-                    }
-                });
-            });
-            
-            const theLink = `${baseUrl}?${params.toString()}`
-            window.open(theLink, "_blank");
-            console.log('Shareable Link:', theLink);
-        }
-
-        // Initialize the app when page loads
-        window.addEventListener('DOMContentLoaded', init);
-    </script>
+      } catch (e) {
+        console.error(e);
+        alertWithContact("Unexpected error: " + e.message);
+      }
+    })();
+  </script>
 </body>
 </html>
-
-
