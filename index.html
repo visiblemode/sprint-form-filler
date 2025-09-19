@@ -19,51 +19,44 @@
   <style>
     :root{
       /* Pastels on dark */
-      --pastel-red:    rgba(255, 107, 129, 0.18);
-      --pastel-yellow: rgba(255, 221,  87, 0.18);
-      --pastel-green:  rgba( 46, 204, 113, 0.18);
-      --pastel-teal:   rgba( 26, 188, 156, 0.18);
-      --pastel-grey:   rgba(200, 200, 200, 0.12);
-
+      --pastel-red:    rgba(255, 107, 129, 0.28);
+      --pastel-yellow: rgba(255, 221,  87, 0.28);
+      --pastel-green:  rgba( 46, 204, 113, 0.28);
+      --pastel-teal:   rgba( 26, 188, 156, 0.28);
+      --pastel-grey:   rgba(200, 200, 200, 0.28);
       /* Overcap */
-      --overcap-fill:  rgba(220,  53,  69, 0.35); /* firmer red */
-      --overcap-border:#dc3545;                   /* strong red */
-
-      --text: #eee;
-      --muted:#bbb;
+      --overcap-fill:  rgba(220,  53,  69, 0.35);
+      --overcap-border:#dc3545;
+      --text: #eaeaea;
+      --muted:#bdbdbd;
       --line:#666;
-      --icon-bg:#111;
-      --icon-border:#333;
-      --header-text:#fff;
     }
 
-    /* Global dark theme + non-selectable text */
+    /* Global dark + no text drag / selection */
     html, body { height: 100%; }
     body {
-      margin: 12px;
-      font-family: system-ui, sans-serif;
-      background: #000;
-      color: var(--text);
-      -webkit-user-select: none;
-      -moz-user-select: none;
-      -ms-user-select: none;
+      font-family: system-ui, sans-serif; margin: 12px;
+      background:#000; color: var(--text);
+      -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
       user-select: none;
+      -webkit-user-select: none;
     }
+    * { -webkit-tap-highlight-color: transparent; }
+    img { -webkit-user-drag: none; user-drag: none; }
 
-    h2 { margin: 12px 0 6px; font-size: 1rem; color: var(--header-text); }
+    h2 { margin: 12px 0 6px; font-size: 1rem; color:#fff; }
     .app { display: grid; gap: 16px; }
 
-    .tip { color:#ddd; font-size: 0.95rem; }
+    .tip { color: var(--muted); font-size: 0.95rem; }
 
     .row { display: grid; gap: 8px; }
     .row-head { display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; }
     .row-head .live { font-weight:600; }
     .row-head .count { font-variant-numeric: tabular-nums; }
-    .row-head .count.over { color: #ff6262; } /* only X turns red */
+    .row-head .count.over { color: var(--overcap-border); } /* just the X */
 
     .palette, .tier {
-      border: 1px dashed var(--line); /* 1px border as requested */
-      border-radius: 10px;
+      border: 1px dashed var(--line); /* 1px as requested */
       padding: 8px;
       min-height: 64px;
       display: flex;
@@ -71,58 +64,71 @@
       align-items: flex-start;
       gap: 6px;
       position: relative;
-      background: #050505;
+      border-radius: 10px; /* soft corners */
+      overflow: hidden;    /* keep contents within rounded corners */
+      background: rgba(255,255,255,0.03); /* subtle for palette */
+      touch-action: none; /* help prevent scroll during drag */
     }
 
-    /* Tier-specific pastel fills */
+    /* Per-tier pastel fills (on dark) */
     #tier-top3 { background: var(--pastel-red); }
     #tier-high { background: var(--pastel-yellow); }
     #tier-mid  { background: var(--pastel-green); }
     #tier-low  { background: var(--pastel-teal); }
     #tier-ni   { background: var(--pastel-grey); }
 
-    /* Overcap visuals: firmer red fill + thicker dashed red border */
-    .overcap {
+    /* Overcap: stronger red and thicker dashed border */
+    .tier.overcap {
       background: var(--overcap-fill) !important;
-      border-color: var(--overcap-border) !important;
-      border-width: 2px !important;           /* thicker on overcap */
-      border-style: dashed !important;
+      border: 2px dashed var(--overcap-border);
     }
 
     .icon {
       width: 56px; height: 56px;
-      border: 1px solid var(--icon-border);    /* 1px border */
-      border-radius: 10px;
-      background: var(--icon-bg);
+      border: 1px solid var(--line);  /* 1px border */
+      border-radius: 10px;            /* rounded corners */
+      background: #111 center/contain no-repeat;
       display: inline-flex; align-items: center; justify-content: center;
       cursor: grab; touch-action: none; position: relative;
-      /* keep image inside rounded corners */
-      overflow: hidden;
+      overflow: hidden;               /* ensure image stays within rounded corners */
     }
     .icon:active { cursor: grabbing; }
     .icon img {
       width: 100%; height: 100%; object-fit: contain; pointer-events: none;
-      -webkit-user-drag: none; user-drag: none; border-radius: inherit;
+      display:block; border-radius: inherit;
+      background: transparent;
+      draggable: false;
     }
 
     .ghost {
       width: 56px; height: 56px;
       outline: 2px solid #888; outline-offset: -2px; border-radius: 10px;
-      background: repeating-linear-gradient(45deg,#1a1a1a,#1a1a1a 6px,#141414 6px,#141414 12px);
+      background: repeating-linear-gradient(45deg,#1b1b1b,#1b1b1b 6px,#131313 6px,#131313 12px);
     }
 
-    .controls { display:flex; gap:8px; align-items:center; flex-wrap: wrap; }
-    button { padding: 8px 12px; background:#111; color:#fff; border:1px solid var(--line); border-radius:8px; }
-    button:hover { background:#171717; }
-    .small { font-size: 0.9rem; color:#ccc; }
+    /* mirror that follows the finger on touch/coarse pointers */
+    .drag-mirror {
+      position: fixed; pointer-events: none; z-index: 9999;
+      width: 56px; height: 56px; border-radius: 10px;
+      border: 1px solid var(--line); background:#111;
+      opacity: 0.85; transform: translate(-50%, -50%);
+      display:flex; align-items:center; justify-content:center;
+    }
+    .drag-mirror img { width:100%; height:100%; object-fit:contain; border-radius:inherit; }
 
-    /* Prevent long-press callout on iOS */
-    * { -webkit-touch-callout: none; }
+    .controls { display:flex; gap:8px; align-items:center; flex-wrap: wrap; }
+    button {
+      padding: 8px 12px; border:1px solid var(--line); background:#121212; color: var(--text);
+      border-radius: 8px; cursor: pointer;
+    }
+    button:active { transform: translateY(1px); }
+
+    .small { font-size: 0.9rem; color: var(--muted); }
   </style>
 </head>
 <body>
   <div class="app">
-    <!-- Top tip remains at top -->
+    <!-- Tip stays at top -->
     <div class="tip">
       Drag items into tiers. Over-cap rows turn light red. Palette items are treated as Not Interested (not submitted).
     </div>
@@ -184,7 +190,7 @@
     function alertWithContact(msg) {
       alert(msg + "\n\nPlease notify @dovemail on Discord about this error");
     }
-    function alertSimple(msg) { alert(msg); } // for overfill only
+    function alertSimple(msg) { alert(msg); }
 
     function getParam(name) {
       const fromHash = new URLSearchParams((location.hash || "").replace(/^#/, ""));
@@ -206,19 +212,21 @@
       });
     }
 
-    function findInsertionPoint(container, clientX) {
+    // 2-D insertion heuristic for multi-row tiers
+    function findInsertionPoint2D(container, x, y) {
       const children = Array.from(container.querySelectorAll('.icon'));
-      let closest = null, closestOffset = Number.POSITIVE_INFINITY;
       for (const child of children) {
-        const rect = child.getBoundingClientRect();
-        const mid = rect.left + rect.width / 2;
-        const offset = clientX - mid;
-        if (offset < 0 && Math.abs(offset) < closestOffset) {
-          closestOffset = Math.abs(offset);
-          closest = child;
-        }
+        const r = child.getBoundingClientRect();
+        const centerX = r.left + r.width / 2;
+        const centerY = r.top  + r.height / 2;
+
+        // If the pointer is above the center of this child, insert before it.
+        if (y < centerY - 2) return child;
+
+        // If we're on the same row band, use X to decide before/after within the row.
+        if (y >= r.top && y <= r.bottom && x < centerX) return child;
       }
-      return closest; // null => append
+      return null; // append
     }
 
     function tierElements() {
@@ -247,9 +255,7 @@
       tiers.forEach(tier => {
         const cap = tier.dataset.max ? parseInt(tier.dataset.max, 10) : null;
         const count = tier.querySelectorAll('.icon').length;
-        // over-cap visuals
         if (cap && count > cap) tier.classList.add('overcap'); else tier.classList.remove('overcap');
-        // live counters
         const key = tier.dataset.tier;
         if (hdr[key]) {
           hdr[key].textContent = String(count);
@@ -295,103 +301,157 @@
         return null;
       }
     }
-    function clearPlacements() {
-      try { localStorage.removeItem(STORAGE_KEY); } catch(e){}
-    }
+    function clearPlacements() { try { localStorage.removeItem(STORAGE_KEY); } catch(e){} }
 
     // ---------------------------
-    // Drag & Drop + Touch
+    // Drag & Drop
+    // Desktop (mouse): keep HTML5 DnD.
+    // Touch/Coarse pointers: custom Pointer Events drag with mirror + 2D insertion.
     // ---------------------------
-    let dragState = { draggingEl: null, originContainer: null, ghostEl: null };
+    const IS_COARSE = window.matchMedia && window.matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0;
+
+    let dragState = { draggingEl: null, originContainer: null, ghostEl: null, mirrorEl: null, pointerId: null };
 
     function makeIconEl(item) {
       const el = document.createElement('div');
-      el.className = 'icon'; el.draggable = true;
+      el.className = 'icon';
       el.dataset.id = item.name; el.dataset.entryId = item.entryId;
       el.setAttribute('aria-label', item.name);
+
       const img = document.createElement('img');
-      img.alt = item.name; img.src = item.imgUrl;
+      img.alt = item.name; img.src = item.imgUrl; img.draggable = false;
       el.appendChild(img);
 
-      // Desktop
-      el.addEventListener('dragstart', (e) => {
-        dragState.draggingEl = el;
-        dragState.originContainer = el.parentElement;
-        e.dataTransfer.effectAllowed = "move";
-        e.dataTransfer.setData('text/plain', el.dataset.id);
-        requestAnimationFrame(()=>{ el.style.opacity = '0.5'; });
-      });
-      el.addEventListener('dragend', () => {
-        el.style.opacity = '';
-        dragState.draggingEl = null; dragState.originContainer = null;
-        if (dragState.ghostEl) { dragState.ghostEl.remove(); dragState.ghostEl = null; }
-        updateTierHeadersAndCaps(); savePlacements();
-      });
+      if (!IS_COARSE) {
+        // Desktop HTML5 DnD
+        el.draggable = true;
+        el.addEventListener('dragstart', (e) => {
+          dragState.draggingEl = el;
+          dragState.originContainer = el.parentElement;
+          e.dataTransfer.effectAllowed = "move";
+          e.dataTransfer.setData('text/plain', el.dataset.id);
+          requestAnimationFrame(()=>{ el.style.opacity = '0.5'; });
+        });
+        el.addEventListener('dragend', () => {
+          el.style.opacity = '';
+          dragState.draggingEl = null; dragState.originContainer = null;
+          if (dragState.ghostEl) { dragState.ghostEl.remove(); dragState.ghostEl = null; }
+          updateTierHeadersAndCaps(); savePlacements();
+        });
+      } else {
+        // Pointer Events drag (mobile/tablet)
+        el.draggable = false;
+        el.addEventListener('pointerdown', (e) => {
+          if (e.button !== 0) return;
+          dragState.pointerId = e.pointerId;
+          dragState.draggingEl = el;
+          dragState.originContainer = el.parentElement;
 
-      // Touch
-      el.addEventListener('touchstart', () => {
-        dragState.draggingEl = el;
-        dragState.originContainer = el.parentElement;
-        el.style.opacity = '0.6';
-      }, {passive:true});
-      el.addEventListener('touchmove', (e) => {
-        const t = e.touches[0];
-        const target = document.elementFromPoint(t.clientX, t.clientY);
-        const container = target ? target.closest('.tier, .palette') : null;
-        if (!container) return;
-        if (!dragState.ghostEl) {
-          dragState.ghostEl = document.createElement('div');
-          dragState.ghostEl.className = 'ghost';
-        }
-        const before = findInsertionPoint(container, t.clientX);
-        if (before) container.insertBefore(dragState.ghostEl, before);
-        else container.appendChild(dragState.ghostEl);
-      }, {passive:false});
-      el.addEventListener('touchend', () => {
-        el.style.opacity = '';
-        const ghost = dragState.ghostEl;
-        if (ghost && ghost.parentElement) {
-          ghost.parentElement.insertBefore(el, ghost);
-        }
-        if (ghost) ghost.remove();
-        dragState.ghostEl = null; dragState.draggingEl = null; dragState.originContainer = null;
-        updateTierHeadersAndCaps(); savePlacements();
-      });
+          // create mirror
+          dragState.mirrorEl = document.createElement('div');
+          dragState.mirrorEl.className = 'drag-mirror';
+          const mImg = document.createElement('img');
+          mImg.src = img.src; mImg.alt = img.alt;
+          dragState.mirrorEl.appendChild(mImg);
+          document.body.appendChild(dragState.mirrorEl);
+          positionMirror(e.clientX, e.clientY);
 
-      return el;
-    }
-
-    function setupDragAndDrop() {
-      const droppables = document.querySelectorAll('.palette, .tier');
-      droppables.forEach(container => {
-        container.addEventListener('dragover', (e) => {
-          e.preventDefault();
-          const dragging = dragState.draggingEl; if (!dragging) return;
+          // create ghost to mark insertion spot
           if (!dragState.ghostEl) {
             dragState.ghostEl = document.createElement('div');
             dragState.ghostEl.className = 'ghost';
           }
-          const before = findInsertionPoint(container, e.clientX);
+
+          el.setPointerCapture(e.pointerId);
+        });
+
+        el.addEventListener('pointermove', (e) => {
+          if (dragState.pointerId !== e.pointerId || !dragState.mirrorEl) return;
+          e.preventDefault(); // stop page scroll
+          positionMirror(e.clientX, e.clientY);
+
+          const target = document.elementFromPoint(e.clientX, e.clientY);
+          const container = target ? target.closest('.tier, .palette') : null;
+          if (!container) return;
+
+          const before = findInsertionPoint2D(container, e.clientX, e.clientY);
           if (before) container.insertBefore(dragState.ghostEl, before);
           else container.appendChild(dragState.ghostEl);
+        }, {passive:false});
+
+        el.addEventListener('pointerup', (e) => finishPointerDrag(e));
+        el.addEventListener('pointercancel', (e) => finishPointerDrag(e));
+      }
+
+      return el;
+    }
+
+    function positionMirror(x, y) {
+      if (!dragState.mirrorEl) return;
+      dragState.mirrorEl.style.left = x + 'px';
+      dragState.mirrorEl.style.top  = y + 'px';
+    }
+
+    function finishPointerDrag(e) {
+      if (dragState.pointerId !== e.pointerId) return;
+
+      // drop into ghost location if present
+      if (dragState.ghostEl && dragState.ghostEl.parentElement && dragState.draggingEl) {
+        dragState.ghostEl.parentElement.insertBefore(dragState.draggingEl, dragState.ghostEl);
+      }
+      // cleanup
+      if (dragState.ghostEl) { dragState.ghostEl.remove(); dragState.ghostEl = null; }
+      if (dragState.mirrorEl) { dragState.mirrorEl.remove(); dragState.mirrorEl = null; }
+      dragState.draggingEl = null;
+      dragState.originContainer = null;
+      dragState.pointerId = null;
+
+      updateTierHeadersAndCaps(); savePlacements();
+    }
+
+    function setupDragAndDrop() {
+      // Desktop droppables (HTML5 DnD)
+      if (!IS_COARSE) {
+        const droppables = document.querySelectorAll('.palette, .tier');
+        droppables.forEach(container => {
+          container.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            const dragging = dragState.draggingEl; if (!dragging) return;
+
+            if (!dragState.ghostEl) {
+              dragState.ghostEl = document.createElement('div');
+              dragState.ghostEl.className = 'ghost';
+            }
+            const before = findInsertionPoint2D(container, e.clientX, e.clientY);
+            if (before) container.insertBefore(dragState.ghostEl, before);
+            else container.appendChild(dragState.ghostEl);
+          });
+
+          container.addEventListener('drop', (e) => {
+            e.preventDefault();
+            const dragging = dragState.draggingEl; if (!dragging) return;
+            const ghost = dragState.ghostEl;
+            if (ghost && ghost.parentElement === container) {
+              container.insertBefore(dragging, ghost);
+              ghost.remove(); dragState.ghostEl = null;
+            } else {
+              container.appendChild(dragging);
+            }
+            updateTierHeadersAndCaps(); savePlacements();
+          });
         });
-        container.addEventListener('drop', (e) => {
-          e.preventDefault();
-          const dragging = dragState.draggingEl; if (!dragging) return;
-          const ghost = dragState.ghostEl;
-          if (ghost && ghost.parentElement === container) {
-            container.insertBefore(dragging, ghost);
-            ghost.remove(); dragState.ghostEl = null;
-          } else {
-            container.appendChild(dragging);
+
+        // Prevent accidental dragging of text/images outside icons
+        document.addEventListener('dragstart', (e) => {
+          if (!(e.target && e.target.classList && e.target.classList.contains('icon'))) {
+            e.preventDefault();
           }
-          updateTierHeadersAndCaps(); savePlacements();
         });
-      });
+      }
     }
 
     // ---------------------------
-    // Generation Logic (direct per tier)
+    // Generation Logic (per your revised rules)
     // ---------------------------
     function generatePrefill(parsed, iconData) {
       if (anyTierOverCap()) {
@@ -402,12 +462,13 @@
       const { top3: top3El, high: highEl, mid: midEl, low: lowEl } = tierElements();
       const getNames = el => Array.from(el.querySelectorAll('.icon')).map(i => i.dataset.id);
 
-      const top3Names = getNames(top3El);  // use as-is, up to 3 will populate
+      const top3Names = getNames(top3El);
       const highNames = getNames(highEl);
       const midNames  = getNames(midEl);
       const lowNames  = getNames(lowEl);
 
       const nameToEntry = new Map(iconData.map(o => [o.name, o.entryId]));
+
       const params = new URLSearchParams();
       params.set('usp', 'pp_url');
 
@@ -458,7 +519,7 @@
             const icons = convertToIconData(parsed);
             const { palette, top3, high, mid, low, ni } = tierElements();
 
-            // Render all icons to palette
+            // Render icons into palette
             const byName = new Map();
             icons.forEach(item => {
               const el = makeIconEl(item);
