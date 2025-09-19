@@ -411,7 +411,7 @@
         el.addEventListener('touchend', (e) => {
           el.style.opacity = '';
 
-          // If we barely moved, this is a tap: toggle selection & show move controls
+          // If we barely moved, this is a tap: toggle selection
           if (!moved) {
             if (selectedIcon === el) { clearSelection(); return; }
             if (selectedIcon) selectedIcon.classList.remove('selected');
@@ -425,13 +425,16 @@
             return;
           }
 
-          // Moved: drop by appending to targeted tier
+          // Moved: drop into targeted tier, unless it's the same tier
           if (mobileTargetTier) {
             mobileTargetTier.classList.remove('targeting');
-            mobileTargetTier.appendChild(el);
+            if (mobileTargetTier !== dragState.originContainer) {
+              mobileTargetTier.appendChild(el);
+            }
           }
           mobileTargetTier = null;
-          dragState.draggingEl = null; dragState.originContainer = null;
+          dragState.draggingEl = null;
+          dragState.originContainer = null;
 
           clearSelection(); // dropping clears selection
           updateTierHeadersAndCaps(); savePlacements();
