@@ -18,44 +18,52 @@
   </script>
   <style>
     :root{
-      /* Pastels on dark */
-      --pastel-red:    rgba(255, 107, 129, 0.28);
-      --pastel-yellow: rgba(255, 221,  87, 0.28);
-      --pastel-green:  rgba( 46, 204, 113, 0.28);
-      --pastel-teal:   rgba( 26, 188, 156, 0.28);
-      --pastel-grey:   rgba(200, 200, 200, 0.22);
+      /* Pastels on dark (from your spec) */
+      --pastel-red:    rgba(255, 107, 129, 0.18);
+      --pastel-yellow: rgba(255, 221,  87, 0.18);
+      --pastel-green:  rgba( 46, 204, 113, 0.18);
+      --pastel-teal:   rgba( 26, 188, 156, 0.18);
+      --pastel-grey:   rgba(200, 200, 200, 0.12);
 
       /* Overcap */
-      --overcap-fill:  rgba(220, 53, 69, 0.35); /* firmer red */
-      --overcap-border:#dc3545;                  /* strong red */
+      --overcap-fill:  rgba(220,  53,  69, 0.35); /* firmer red */
+      --overcap-border:#dc3545;                   /* strong red */
 
-      /* Neutrals (dark theme) */
+      --fg: #fff;
       --bg: #000;
-      --text: #e9e9e9;
-      --muted: #bbb;
-      --border: #444;
-      --tile-bg: #111;
-      --tile-border: #555;
-      --ghost-line: #888;
+      --muted:#aaa;
+      --line:#36c26a; /* typing-indicator green for insertion line */
+      --dash:#666;    /* default dashed border on dark */
+      --chip:#e0e0e0;
     }
 
-    /* Base */
-    html, body { background: var(--bg); color: var(--text); }
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 12px; }
-    h2 { margin: 12px 0 6px; font-size: 1rem; color: #fff; }
+    /* Global dark theme + anti-select/drag */
+    html, body { height: 100%; background: var(--bg); color: var(--fg); }
+    body {
+      font-family: system-ui, sans-serif;
+      margin: 12px;
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      user-select: none;
+      -webkit-touch-callout: none;
+    }
+    * { -webkit-tap-highlight-color: transparent; }
+    img, svg { -webkit-user-drag: none; user-drag: none; }
+
+    h2 { margin: 12px 0 6px; font-size: 1rem; color: var(--fg); }
     .app { display: grid; gap: 16px; }
 
-    .tip { color: var(--muted); font-size: 0.95rem; }
+    .tip { color: var(--fg); opacity: 0.9; font-size: 0.95rem; }
 
     .row { display: grid; gap: 8px; }
     .row-head { display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; }
     .row-head .live { font-weight:600; }
-    .row-head .count { font-variant-numeric: tabular-nums; }
-    .row-head .count.over { color: var(--overcap-border); } /* just the X turns red */
+    .row-head .count { font-variant-numeric: tabular-nums; color: var(--fg); }
+    .row-head .count.over { color: #ff5252; } /* just the X turns red */
 
-    /* Containers */
+    /* Drop zones */
     .palette, .tier {
-      border: 1.5px dashed var(--border);
+      border: 2px dashed var(--dash);
       padding: 8px;
       min-height: 64px;
       display: flex;
@@ -64,74 +72,77 @@
       gap: 6px;
       position: relative;
       border-radius: 10px;
-      /* ensure inner content respects the rounded corners when backgrounds touch edges */
-      overflow: hidden;
-      color: #fff; /* white text on tier labels/headers area */
+      overflow: hidden; /* ensure icons + images respect rounded corners */
     }
 
-    /* Tier background colors (pastels on dark) */
-    #tier-top3 { background: var(--pastel-red); }
-    #tier-high { background: var(--pastel-yellow); }
-    #tier-mid  { background: var(--pastel-green); }
+    /* Tier pastel backgrounds (on dark) */
+    #tier-top3 { background: var(--pastel-red);  }
+    #tier-high { background: var(--pastel-yellow);}
+    #tier-mid  { background: var(--pastel-green);}
     #tier-low  { background: var(--pastel-teal); }
     #tier-ni   { background: var(--pastel-grey); }
 
-    /* Palette stays neutral but dark */
-    .palette { background: rgba(255,255,255,0.04); }
-
-    /* Overcap visuals */
-    .overcap {
+    /* Overcap: firmer red fill + thicker dashed red border */
+    .tier.overcap {
       background: var(--overcap-fill) !important;
-      border-color: var(--overcap-border) !important;
-      border-width: 2.5px !important; /* thicker dashed border */
+      border-color: var(--overcap-border);
+      border-width: 3px;
+      border-style: dashed;
     }
 
-    /* Icon tiles (rounded & clipped) */
+    /* Icons — clipped to rounded corners, prevent image corners peeking */
     .icon {
       width: 56px; height: 56px;
-      border: 1px solid var(--tile-border);
-      border-radius: 10px;
-      background: var(--tile-bg) center/contain no-repeat;
-      display: inline-flex; align-items: center; justify-content: center;
-      cursor: grab; user-select: none; touch-action: none; position: relative;
-      overflow: hidden; /* critical: clip image to rounded corners */
+      border: 1px solid #333;
+      border-radius: 8px;
+      background: #111 center/contain no-repeat;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: grab;
+      touch-action: none;
+      position: relative;
+      overflow: hidden;           /* clip internal image to rounded corners */
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06);
     }
     .icon:active { cursor: grabbing; }
     .icon img {
-      width: 100%; height: 100%; object-fit: contain; pointer-events: none;
+      width: 100%; height: 100%;
+      object-fit: contain;
+      pointer-events: none;
+      border-radius: inherit;     /* keep image corners matching parent */
       display: block;
-      border-radius: inherit; /* keep image corner rounding consistent */
     }
 
-    /* Drag ghost (visible on dark) */
-    .ghost {
-      width: 56px; height: 56px;
-      outline: 2px solid var(--ghost-line);
-      outline-offset: -2px; border-radius: 10px;
-      background: repeating-linear-gradient(
-        45deg,
-        rgba(255,255,255,0.09), rgba(255,255,255,0.09) 6px,
-        rgba(255,255,255,0.04) 6px, rgba(255,255,255,0.04) 12px
-      );
+    /* Slim green insertion indicator (no box) */
+    .ghost-line {
+      width: 2px;
+      height: 72%;           /* a bit shorter than row for nice look */
+      background: var(--line);
+      border-radius: 2px;
+      align-self: center;
     }
 
     .controls { display:flex; gap:8px; align-items:center; flex-wrap: wrap; }
     button {
-      padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border);
-      background: #111; color: var(--text);
+      padding: 8px 12px;
+      background: #111;
+      color: var(--fg);
+      border: 1px solid #333;
+      border-radius: 8px;
     }
-    button:hover { filter: brightness(1.1); }
+    button:hover { border-color:#555; }
     .small { font-size: 0.9rem; color: var(--muted); }
   </style>
 </head>
 <body>
   <div class="app">
-    <!-- Tip stays at top -->
+    <!-- Top tooltip stays at top -->
     <div class="tip">
       Drag items into tiers. Over-cap rows turn light red. Palette items are treated as Not Interested (not submitted).
     </div>
 
-    <!-- Tiers -->
+    <!-- Tiers block with live counters -->
     <section class="row">
       <div class="row-head">
         <h2>Top 3 (<span class="live">Current: <span id="cnt-top3" class="count">0</span>/3</span>)</h2>
@@ -306,22 +317,32 @@
     // ---------------------------
     let dragState = { draggingEl: null, originContainer: null, ghostEl: null };
 
+    function ensureGhostLine() {
+      if (!dragState.ghostEl) {
+        const line = document.createElement('div');
+        line.className = 'ghost-line';
+        dragState.ghostEl = line;
+      }
+      return dragState.ghostEl;
+    }
+
     function makeIconEl(item) {
       const el = document.createElement('div');
       el.className = 'icon'; el.draggable = true;
       el.dataset.id = item.name; el.dataset.entryId = item.entryId;
       el.setAttribute('aria-label', item.name);
+
       const img = document.createElement('img');
-      img.alt = item.name; img.src = item.imgUrl;
+      img.alt = item.name; img.src = item.imgUrl; img.draggable = false;
       el.appendChild(img);
 
-      // Desktop
+      // Desktop DnD
       el.addEventListener('dragstart', (e) => {
         dragState.draggingEl = el;
         dragState.originContainer = el.parentElement;
         e.dataTransfer.effectAllowed = "move";
         e.dataTransfer.setData('text/plain', el.dataset.id);
-        requestAnimationFrame(()=>{ el.style.opacity = '0.5'; });
+        requestAnimationFrame(() => { el.style.opacity = '0.5'; });
       });
       el.addEventListener('dragend', () => {
         el.style.opacity = '';
@@ -330,32 +351,31 @@
         updateTierHeadersAndCaps(); savePlacements();
       });
 
-      // Touch
+      // Touch DnD
       el.addEventListener('touchstart', () => {
         dragState.draggingEl = el;
         dragState.originContainer = el.parentElement;
         el.style.opacity = '0.6';
       }, {passive:true});
+
       el.addEventListener('touchmove', (e) => {
         const t = e.touches[0];
         const target = document.elementFromPoint(t.clientX, t.clientY);
         const container = target ? target.closest('.tier, .palette') : null;
         if (!container) return;
-        if (!dragState.ghostEl) {
-          dragState.ghostEl = document.createElement('div');
-          dragState.ghostEl.className = 'ghost';
-        }
+        const line = ensureGhostLine();
         const before = findInsertionPoint(container, t.clientX);
-        if (before) container.insertBefore(dragState.ghostEl, before);
-        else container.appendChild(dragState.ghostEl);
+        if (before) container.insertBefore(line, before);
+        else container.appendChild(line);
       }, {passive:false});
+
       el.addEventListener('touchend', () => {
         el.style.opacity = '';
-        const ghost = dragState.ghostEl;
-        if (ghost && ghost.parentElement) {
-          ghost.parentElement.insertBefore(el, ghost);
+        const line = dragState.ghostEl;
+        if (line && line.parentElement) {
+          line.parentElement.insertBefore(el, line);
         }
-        if (ghost) ghost.remove();
+        if (line) line.remove();
         dragState.ghostEl = null; dragState.draggingEl = null; dragState.originContainer = null;
         updateTierHeadersAndCaps(); savePlacements();
       });
@@ -369,21 +389,19 @@
         container.addEventListener('dragover', (e) => {
           e.preventDefault();
           const dragging = dragState.draggingEl; if (!dragging) return;
-          if (!dragState.ghostEl) {
-            dragState.ghostEl = document.createElement('div');
-            dragState.ghostEl.className = 'ghost';
-          }
+          const line = ensureGhostLine();
           const before = findInsertionPoint(container, e.clientX);
-          if (before) container.insertBefore(dragState.ghostEl, before);
-          else container.appendChild(dragState.ghostEl);
+          if (before) container.insertBefore(line, before);
+          else container.appendChild(line);
         });
+
         container.addEventListener('drop', (e) => {
           e.preventDefault();
           const dragging = dragState.draggingEl; if (!dragging) return;
-          const ghost = dragState.ghostEl;
-          if (ghost && ghost.parentElement === container) {
-            container.insertBefore(dragging, ghost);
-            ghost.remove(); dragState.ghostEl = null;
+          const line = dragState.ghostEl;
+          if (line && line.parentElement === container) {
+            container.insertBefore(dragging, line);
+            line.remove(); dragState.ghostEl = null;
           } else {
             container.appendChild(dragging);
           }
@@ -400,6 +418,7 @@
         alertSimple("One or more rows exceed their maximum. Please adjust before generating.");
         return;
       }
+
       const { top3: top3El, high: highEl, mid: midEl, low: lowEl } = tierElements();
       const getNames = el => Array.from(el.querySelectorAll('.icon')).map(i => i.dataset.id);
 
@@ -409,6 +428,7 @@
       const lowNames  = getNames(lowEl);
 
       const nameToEntry = new Map(iconData.map(o => [o.name, o.entryId]));
+
       const params = new URLSearchParams();
       params.set('usp', 'pp_url');
 
@@ -504,4 +524,3 @@
   </script>
 </body>
 </html>
-
