@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <title>Sprint Tier Filler</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
   <!-- Dependency per spec -->
   <script src="lz-string.min.js"></script>
   <!-- Optional fallback if local file missing -->
@@ -31,7 +31,10 @@
 
     /* dark theme + no text selection (desktop + mobile) */
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-    html, body { height:100%; }
+    html, body {
+      height: 100%;
+      touch-action: manipulation; /* prevents double-tap to zoom while allowing normal taps */
+    }
     body {
       margin: 12px;
       font-family: system-ui, sans-serif;
