@@ -159,11 +159,11 @@
     <section class="row">
       <div class="controls">
         <button id="fillBtn">✍️ Fill Google Form</button>
-        <button id="exportBtn" title="Export your current placements to a shareable token">🔽 Export Tier List</button>
-        <button id="importBtn" title="Import a previously exported token">🔼
-Import Tier List</button>
         <button id="shareBtn"  title="Create an image of Top3/High/Mid/Low for sharing">🖼️
 Create Tier List Image</button>
+        <button id="importBtn" title="Import a previously exported token">🔼
+Import Tier List</button>
+        <button id="exportBtn" title="Export your current placements to a shareable token">🔽 Export Tier List</button>
         <button id="resetBtn"  title="Move all items back to the palette">🧼 Reset</button>
       </div>
       <div class="row-head"><h2>Palette</h2></div>
@@ -613,8 +613,8 @@ Create Tier List Image</button>
         const corner = 18;
         const gutter = 8;
 
-        const cols = 10;           // always 8 columns wide
-        // choose nice width; icons scale to fit 8 columns
+        const cols = 5;           // always COLS columns wide
+        // choose nice width; icons scale to fit COLs columns
         const targetPageWidth = 1080; // exported image width (approx)
         const cell = Math.floor((targetPageWidth - padding*2 - gutter*(cols-1)) / cols);
         const iconSize = Math.max(56, Math.min(96, cell));
@@ -866,4 +866,5 @@ Create Tier List Image</button>
   </script>
 </body>
 </html>
+
 
