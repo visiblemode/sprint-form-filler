@@ -1,13 +1,11 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <title>Sprint Tier Filler</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-  <!-- Dependency per spec -->
+  <!-- Prevent mobile double/triple-tap zoom; keep pinch disabled for this app -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
   <script src="lz-string.min.js"></script>
-  <!-- Optional fallback if local file missing -->
   <script>
     (function ensureLZ(){
       if (!window.LZString) {
@@ -30,19 +28,15 @@
       --overcap-border:#dc3545;
     }
 
-    /* dark theme + no text selection (desktop + mobile) */
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-    html, body {
-      height: 100%;
-      touch-action: manipulation; /* prevents double-tap to zoom while allowing normal taps */
-    }
+    html, body { height:100%; touch-action: manipulation; }
     body {
       margin: 12px;
       font-family: system-ui, sans-serif;
       background: #000;
       color: #eee;
-      user-select: none;          /* desktop */
-      -webkit-user-select: none;  /* iOS/Safari */
+      user-select: none;
+      -webkit-user-select: none;
       -ms-user-select: none;
     }
 
@@ -50,15 +44,14 @@
     .app { display: grid; gap: 16px; }
 
     .tip { color:#ddd; font-size: 0.95rem; }
-
     .row { display: grid; gap: 8px; }
     .row-head { display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; }
     .row-head .live { font-weight:600; color:#fff; }
     .row-head .count { font-variant-numeric: tabular-nums; color:#fff; }
-    .row-head .count.over { color: #ff6464; } /* only the X goes red */
+    .row-head .count.over { color: #ff6464; }
 
     .palette, .tier {
-      border: 1px dashed #666;   /* 1px borders per request */
+      border: 1px dashed #666; /* 1px borders */
       padding: 8px;
       min-height: 64px;
       display: flex;
@@ -69,32 +62,26 @@
       border-radius: 10px;
     }
 
-    /* Tier color assignments */
+    /* Tier colors */
     #tier-top3 { background: var(--pastel-red); }
     #tier-high { background: var(--pastel-yellow); }
     #tier-mid  { background: var(--pastel-green); }
     #tier-low  { background: var(--pastel-teal); }
     #tier-ni   { background: var(--pastel-grey); }
 
-    /* Overcap: firmer red fill + thicker dashed border */
     .tier.overcap {
       background: var(--overcap-fill) !important;
       border-color: var(--overcap-border);
       border-width: 2px;
       border-style: dashed;
     }
-
-    /* During mobile drag, show a clear target highlight */
-    .tier.targeting {
-      outline: 2px solid #fff;
-      outline-offset: 2px;
-    }
+    .tier.targeting { outline: 2px solid #fff; outline-offset: 2px; }
 
     .icon {
       width: 56px; height: 56px;
-      border: 1px solid #444;           /* 1px */
+      border: 1px solid #444;
       border-radius: 10px;
-      overflow: hidden;                  /* ensure corners clip the image */
+      overflow: hidden;                 /* clip sharp image corners */
       background: #111 center/contain no-repeat;
       display: inline-flex; align-items: center; justify-content: center;
       cursor: grab; user-select: none; touch-action: none; position: relative;
@@ -102,17 +89,14 @@
     .icon:active { cursor: grabbing; }
     .icon img { width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
 
-    /* Desktop ghost */
     .ghost {
       width: 56px; height: 56px;
       outline: 2px solid #aaa; outline-offset: -2px; border-radius: 10px;
       background: repeating-linear-gradient(45deg,#1c1c1c,#1c1c1c 6px,#151515 6px,#151515 12px);
     }
 
-    /* Mobile tap-to-select affordance */
     .icon.selected {
-      border-width: 2px;
-      border-color: #fff;
+      border-width: 2px; border-color: #fff;
       box-shadow: 0 0 0 3px rgba(255,255,255,0.15);
       animation: soft-glow 1.2s ease-in-out infinite alternate;
     }
@@ -130,16 +114,13 @@
     button:hover { background:#181818; }
     .small { font-size: 0.9rem; color:#bbb; }
 
-    /* Mobile move controls (injected under active tier) */
-    .mobile-controls {
-      display:flex; gap:8px; margin-top:6px;
-    }
+    .mobile-controls { display:flex; gap:8px; margin-top:6px; }
     .mobile-controls.hidden { display:none; }
   </style>
 </head>
 <body>
   <div class="app">
-    <!-- Top tooltip stays at top -->
+    <!-- Tip: numbered steps -->
     <div class="tip">
         Move items from the Palette (bottom) into tiers, then click ‘Fill Google Form.’ Page 2 will be prefilled with your tier list. Palette items aren’t submitted. Your list is saved between visits.
     </div>
@@ -180,28 +161,25 @@
       <div id="tier-ni" class="tier" data-tier="ni" aria-label="Not Interested"></div>
     </section>
 
-    <!-- Controls + Palette below tiers -->
+    <!-- Controls + Palette -->
     <section class="row">
       <div class="controls">
         <button id="fillBtn">Fill Google Form</button>
+        <button id="exportBtn" title="Export your current placements to a shareable token">Export Tier List</button>
+        <button id="importBtn" title="Import a previously exported token">Import Tier List</button>
         <button id="resetBtn" title="Move all items back to the palette">Reset</button>
-        <span class="small">Palette is below — items left here are not submitted.</span>
       </div>
-      <div class="row-head">
-        <h2>Palette</h2>
-      </div>
+      <div class="row-head"><h2>Palette</h2></div>
       <div id="palette" class="palette" data-tier="palette" aria-label="Palette"></div>
     </section>
   </div>
 
   <script>
-    // ---------------------------
-    // Helpers
-    // ---------------------------
+    // ---------- Utils / Errors ----------
     function alertWithContact(msg) {
       alert(msg + "\n\nPlease notify @dovemail on Discord about this error");
     }
-    function alertSimple(msg) { alert(msg); } // for overfill only
+    function alertSimple(msg) { alert(msg); }
 
     function getParam(name) {
       const fromHash = new URLSearchParams((location.hash || "").replace(/^#/, ""));
@@ -235,7 +213,7 @@
           closest = child;
         }
       }
-      return closest; // null => append
+      return closest;
     }
 
     function tierElements() {
@@ -263,9 +241,7 @@
       tiers.forEach(tier => {
         const cap = tier.dataset.max ? parseInt(tier.dataset.max, 10) : null;
         const count = tier.querySelectorAll('.icon').length;
-        // over-cap background/border
         if (cap && count > cap) tier.classList.add('overcap'); else tier.classList.remove('overcap');
-        // live counters
         const key = tier.dataset.tier;
         if (hdr[key]) {
           hdr[key].textContent = String(count);
@@ -284,21 +260,21 @@
       return false;
     }
 
-    // ---------------------------
-    // Persistence
-    // ---------------------------
+    // ---------- Persistence ----------
     const STORAGE_KEY = "stf-placements-v1";
-    function savePlacements() {
+    function getPlacementsObject() {
       const { top3, high, mid, low, ni } = tierElements();
       const getNames = el => Array.from(el.querySelectorAll('.icon')).map(i => i.dataset.id);
-      const data = {
+      return {
         top3: getNames(top3),
         high: getNames(high),
         mid:  getNames(mid),
         low:  getNames(low),
         ni:   getNames(ni),
       };
-      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
+    }
+    function savePlacements() {
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(getPlacementsObject())); }
       catch(e){ console.warn("Failed to save placements:", e); }
     }
     function loadPlacements() {
@@ -315,30 +291,84 @@
       try { localStorage.removeItem(STORAGE_KEY); } catch(e){}
     }
 
-    // ---------------------------
-    // Drag & Drop + Touch
-    // ---------------------------
+    // ---------- Export / Import ----------
+    const TOKEN_PREFIX = "STFv1:";
+    function exportToken() {
+      const payload = {
+        v: 1,
+        placements: getPlacementsObject()
+      };
+      const json = JSON.stringify(payload);
+      if (!window.LZString) { alertWithContact("LZString missing; cannot export."); return; }
+      const token = TOKEN_PREFIX + LZString.compressToEncodedURIComponent(json);
+      // Try to copy; also show for manual copy
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(token).then(()=>{
+          alertSimple("Tier list exported to clipboard.\n\nYou can paste this token to import later.");
+        }).catch(()=>{
+          prompt("Copy your tier list token:", token);
+        });
+      } else {
+        prompt("Copy your tier list token:", token);
+      }
+    }
+
+    function importTokenFlow() {
+      const token = prompt("Paste your tier list token:");
+      if (!token) return;
+      try {
+        if (!token.startsWith(TOKEN_PREFIX)) throw new Error("Bad token prefix");
+        const encoded = token.slice(TOKEN_PREFIX.length);
+        if (!window.LZString) throw new Error("LZString missing");
+        const json = LZString.decompressFromEncodedURIComponent(encoded);
+        if (!json) throw new Error("Decompression failed");
+        const data = JSON.parse(json);
+        if (!data || data.v !== 1 || !data.placements) throw new Error("Invalid payload");
+
+        applyPlacements(data.placements);
+        savePlacements();
+        updateTierHeadersAndCaps();
+        alertSimple("Tier list imported.");
+      } catch (e) {
+        console.error(e);
+        alertWithContact("Failed to import token: " + e.message);
+      }
+    }
+
+    function applyPlacements(obj) {
+      const { palette, top3, high, mid, low, ni } = tierElements();
+      // First move everything to palette, then lay down by order
+      const all = [top3, high, mid, low, ni].flatMap(el => Array.from(el.querySelectorAll('.icon')));
+      all.forEach(el => palette.appendChild(el));
+
+      // Map current icons by name
+      const byName = new Map(Array.from(palette.querySelectorAll('.icon')).map(el => [el.dataset.id, el]));
+
+      const apply = (arr, container) => (arr || []).forEach(name => {
+        const el = byName.get(name);
+        if (el) container.appendChild(el);
+      });
+      apply(obj.top3, top3);
+      apply(obj.high, high);
+      apply(obj.mid,  mid);
+      apply(obj.low,  low);
+      apply(obj.ni,   ni);
+    }
+
+    // ---------- Drag & Drop + Mobile behaviors ----------
     const isCoarse = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
 
-    // ----- Mobile auto-scroll while dragging -----
-    let autoScrollRAF = null;
-    let autoScrollDir = 0;     // -1 = up, +1 = down, 0 = none
-    let lastTouchX = 0;
-    let lastTouchY = 0;
+    let dragState = { draggingEl: null, originContainer: null, ghostEl: null };
+    let mobileTargetTier = null;
 
-    const EDGE_THRESHOLD = 60; // px from top/bottom to start autoscroll
-    const MAX_SPEED = 14;      // px per frame at the very edge (tweak to taste)
-
+    // Auto-scroll while dragging (mobile)
+    let autoScrollRAF = null, autoScrollDir = 0, lastTouchX = 0, lastTouchY = 0;
+    const EDGE_THRESHOLD = 60, MAX_SPEED = 14;
     function startAutoScroll() {
       if (autoScrollRAF !== null) return;
       const step = () => {
         if (autoScrollDir !== 0) {
-          // Speed increases the closer you are to the edge
-          let speed = MAX_SPEED;
-
-          window.scrollBy(0, autoScrollDir * speed);
-
-          // While scrolling, keep the tier highlight fresh under the finger
+          window.scrollBy(0, autoScrollDir * MAX_SPEED);
           const target = document.elementFromPoint(lastTouchX, lastTouchY);
           const container = target ? target.closest('.tier, .palette') : null;
           if (container) {
@@ -353,7 +383,6 @@
       };
       autoScrollRAF = requestAnimationFrame(step);
     }
-
     function stopAutoScroll() {
       autoScrollDir = 0;
       if (autoScrollRAF !== null) {
@@ -361,23 +390,15 @@
         autoScrollRAF = null;
       }
     }
-
     function updateAutoScrollDirection(clientY) {
       const vh = window.innerHeight;
-      if (clientY < EDGE_THRESHOLD) {
-        autoScrollDir = -1;
-      } else if (clientY > vh - EDGE_THRESHOLD) {
-        autoScrollDir = +1;
-      } else {
-        autoScrollDir = 0;
-      }
+      if (clientY < EDGE_THRESHOLD) autoScrollDir = -1;
+      else if (clientY > vh - EDGE_THRESHOLD) autoScrollDir = +1;
+      else autoScrollDir = 0;
       if (autoScrollDir === 0) stopAutoScroll(); else startAutoScroll();
     }
 
-    let dragState = { draggingEl: null, originContainer: null, ghostEl: null };
-    let mobileTargetTier = null;
-
-    // Mobile tap-to-select controls (single instance injected under active tier)
+    // Mobile tap-to-select controls
     const mobileControls = document.createElement('div');
     mobileControls.className = 'mobile-controls hidden';
     const btnUp = document.createElement('button');   btnUp.textContent = 'Move Up';
@@ -391,7 +412,6 @@
       mobileControls.classList.add('hidden');
       if (mobileControls.parentElement) mobileControls.parentElement.removeChild(mobileControls);
     }
-
     function moveSelected(dir) {
       if (!selectedIcon) return;
       const parent = selectedIcon.parentElement;
@@ -416,9 +436,9 @@
       img.alt = item.name; img.src = item.imgUrl;
       el.appendChild(img);
 
-      // Desktop DnD
+      // Desktop drag
       el.addEventListener('dragstart', (e) => {
-        if (isCoarse) { e.preventDefault(); return; } // disable native drag on mobile
+        if (isCoarse) { e.preventDefault(); return; }
         dragState.draggingEl = el;
         dragState.originContainer = el.parentElement;
         e.dataTransfer.effectAllowed = "move";
@@ -434,7 +454,7 @@
         updateTierHeadersAndCaps(); savePlacements();
       });
 
-      // Mobile: tap-to-select + tier-wide drag
+      // Mobile drag + tap-to-select
       if (isCoarse) {
         let startX=0, startY=0, moved=false;
 
@@ -447,16 +467,13 @@
 
         el.addEventListener('touchmove', (e) => {
           const t = e.touches[0];
-          lastTouchX = t.clientX;
-          lastTouchY = t.clientY;
+          lastTouchX = t.clientX; lastTouchY = t.clientY;
 
           const dx = Math.abs(t.clientX - startX), dy = Math.abs(t.clientY - startY);
           if (dx + dy > 8) moved = true;
 
-          // Edge-based auto scroll
           updateAutoScrollDirection(t.clientY);
 
-          // Tier-wide targeting: highlight entire tier, append on drop (unless same tier)
           const target = document.elementFromPoint(t.clientX, t.clientY);
           const container = target ? target.closest('.tier, .palette') : null;
           if (!container) return;
@@ -468,11 +485,10 @@
           mobileTargetTier.classList.add('targeting');
         }, {passive:false});
 
-        el.addEventListener('touchend', (e) => {
+        el.addEventListener('touchend', () => {
           el.style.opacity = '';
-          stopAutoScroll(); // <<< stop autoscroll when finishing
+          stopAutoScroll();
 
-          // If we barely moved, this is a tap: toggle selection
           if (!moved) {
             if (selectedIcon === el) { clearSelection(); return; }
             if (selectedIcon) selectedIcon.classList.remove('selected');
@@ -485,9 +501,9 @@
             return;
           }
 
-          // Moved: drop into targeted tier, unless it's the same tier
           if (mobileTargetTier) {
             mobileTargetTier.classList.remove('targeting');
+            // if same tier as source, don't append (keep position)
             if (mobileTargetTier !== dragState.originContainer) {
               mobileTargetTier.appendChild(el);
             }
@@ -498,32 +514,25 @@
 
           clearSelection();
           updateTierHeadersAndCaps(); savePlacements();
-
-          stopAutoScroll(); // <<< extra safety
         });
-      }
 
         el.addEventListener('touchcancel', () => {
-            el.style.opacity = '';
-            stopAutoScroll();
-            if (mobileTargetTier) mobileTargetTier.classList.remove('targeting');
-            mobileTargetTier = null;
-            dragState.draggingEl = null;
-            dragState.originContainer = null;
-            clearSelection();
-            updateTierHeadersAndCaps();
+          el.style.opacity = '';
+          stopAutoScroll();
+          if (mobileTargetTier) mobileTargetTier.classList.remove('targeting');
+          mobileTargetTier = null;
+          dragState.draggingEl = null;
+          dragState.originContainer = null;
+          clearSelection();
+          updateTierHeadersAndCaps();
         }, {passive:true});
-
+      }
 
       return el;
     }
 
     function setupDragAndDrop() {
-      if (isCoarse) {
-        // Mobile: we do tier-wide highlighting/append in icon handlers; no container dnd needed.
-        return;
-      }
-      // Desktop containers
+      if (isCoarse) return; // mobile uses custom behavior
       const droppables = document.querySelectorAll('.palette, .tier');
       droppables.forEach(container => {
         container.addEventListener('dragover', (e) => {
@@ -552,9 +561,7 @@
       });
     }
 
-    // ---------------------------
-    // Generation Logic (tier-direct, no concatenation)
-    // ---------------------------
+    // ---------- Generation (tier-direct) ----------
     function generatePrefill(parsed, iconData) {
       if (anyTierOverCap()) {
         alertSimple("One or more rows exceed their maximum. Please adjust before generating.");
@@ -569,7 +576,6 @@
       const lowNames  = getNames(lowEl);
 
       const nameToEntry = new Map(iconData.map(o => [o.name, o.entryId]));
-
       const params = new URLSearchParams();
       params.set('usp', 'pp_url');
 
@@ -588,9 +594,7 @@
       window.open(theLink, "_blank");
     }
 
-    // ---------------------------
-    // Reset
-    // ---------------------------
+    // ---------- Reset ----------
     function resetAllToPalette() {
       const ok = confirm("Reset all placements and move all items back to the palette?");
       if (!ok) return;
@@ -602,9 +606,7 @@
       updateTierHeadersAndCaps();
     }
 
-    // ---------------------------
-    // Boot
-    // ---------------------------
+    // ---------- Boot ----------
     (function init() {
       try {
         const dataParam = getParam('data');
@@ -649,9 +651,12 @@
               catch(e){ console.error(e); alertWithContact("Failed to generate prefill URL: " + e.message); }
             });
             document.getElementById('resetBtn').addEventListener('click', resetAllToPalette);
+            document.getElementById('exportBtn').addEventListener('click', exportToken);
+            document.getElementById('importBtn').addEventListener('click', importTokenFlow);
 
-            // Tapping outside selection clears mobile selection
+            // Tap outside to clear mobile selection
             document.addEventListener('click', (e)=>{
+              const isCoarse = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
               if (isCoarse && selectedIcon && !e.target.closest('.icon') && !e.target.closest('.mobile-controls')) {
                 clearSelection();
               }
@@ -672,4 +677,5 @@
   </script>
 </body>
 </html>
+
 
