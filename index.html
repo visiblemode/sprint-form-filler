@@ -476,12 +476,17 @@
             return;
           }
 
-          if (mobileTargetTier) {
-            mobileTargetTier.classList.remove('targeting');
-            if (mobileTargetTier !== dragState.originContainer) {
-              mobileTargetTier.appendChild(el);
+            if (mobileTargetTier) {
+              mobileTargetTier.classList.remove('targeting');
+
+              if (mobileTargetTier !== dragState.originContainer) {
+                if (mobileTargetTier.dataset && mobileTargetTier.dataset.tier === 'palette') {
+                  mobileTargetTier.insertBefore(el, mobileTargetTier.firstElementChild || null);
+                } else {
+                  mobileTargetTier.appendChild(el);
+                }
+              }
             }
-          }
           mobileTargetTier = null;
           dragState.draggingEl = null;
           dragState.originContainer = null;
@@ -516,20 +521,34 @@
             dragState.ghostEl = document.createElement('div');
             dragState.ghostEl.className = 'ghost';
           }
-          const before = findInsertionPoint(container, e.clientX);
-          if (before) container.insertBefore(dragState.ghostEl, before);
-          else container.appendChild(dragState.ghostEl);
+          if (container.dataset && container.dataset.tier === 'palette') {
+            container.insertBefore(dragState.ghostEl, container.firstElementChild || null);
+          } else {
+            const before = findInsertionPoint(container, e.clientX);
+            if (before) container.insertBefore(dragState.ghostEl, before);
+            else container.appendChild(dragState.ghostEl);
+          }
         });
         container.addEventListener('drop', (e) => {
           e.preventDefault();
           const dragging = dragState.draggingEl; if (!dragging) return;
           const ghost = dragState.ghostEl;
-          if (ghost && ghost.parentElement === container) {
-            container.insertBefore(dragging, ghost);
-            ghost.remove(); dragState.ghostEl = null;
+
+          // NEW: if palette, always prepend to the beginning
+          const isPalette = container.dataset && container.dataset.tier === 'palette';
+          if (isPalette) {
+            if (ghost) { ghost.remove(); dragState.ghostEl = null; }
+            container.insertBefore(dragging, container.firstElementChild || null);
           } else {
-            container.appendChild(dragging);
+            // keep existing behavior for tiers
+            if (ghost && ghost.parentElement === container) {
+              container.insertBefore(dragging, ghost);
+              ghost.remove(); dragState.ghostEl = null;
+            } else {
+              container.appendChild(dragging);
+            }
           }
+
           updateTierHeadersAndCaps(); savePlacements();
         });
       });
