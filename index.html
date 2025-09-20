@@ -3,7 +3,6 @@
 <head>
   <meta charset="utf-8" />
   <title>Sprint Tier Filler</title>
-  <!-- Prevent mobile double/triple-tap zoom; keep pinch disabled for this app -->
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
   <script src="lz-string.min.js"></script>
   <script>
@@ -17,13 +16,12 @@
   </script>
   <style>
     :root{
-      /* Pastels on dark */
-      --pastel-red:    rgba(255,107,129,0.28);
-      --pastel-yellow: rgba(255,221, 87,0.28);
-      --pastel-green:  rgba( 46,204,113,0.28);
-      --pastel-teal:   rgba( 26,188,156,0.28);
-      --pastel-grey:   rgba(200,200,200,0.28);
-      /* Overcap */
+      /* dark, saturated cards (export matches these) */
+      --pastel-red:    rgba(111, 16, 26, 0.72);
+      --pastel-yellow: rgba(73, 58, 10, 0.72);
+      --pastel-green:  rgba(  9, 49, 28, 0.72);
+      --pastel-teal:   rgba(  6, 41, 36, 0.72);
+      --pastel-grey:   rgba( 32, 32, 32, 0.72);
       --overcap-fill:  rgba(220, 53, 69, 0.35);
       --overcap-border:#dc3545;
     }
@@ -51,7 +49,7 @@
     .row-head .count.over { color: #ff6464; }
 
     .palette, .tier {
-      border: 1px dashed #666; /* 1px borders */
+      border: 1px dashed #666;
       padding: 8px;
       min-height: 64px;
       display: flex;
@@ -62,7 +60,6 @@
       border-radius: 10px;
     }
 
-    /* Tier colors */
     #tier-top3 { background: var(--pastel-red); }
     #tier-high { background: var(--pastel-yellow); }
     #tier-mid  { background: var(--pastel-green); }
@@ -80,8 +77,8 @@
     .icon {
       width: 56px; height: 56px;
       border: 1px solid #444;
-      border-radius: 10px;
-      overflow: hidden;                 /* clip sharp image corners */
+      border-radius: 12px;
+      overflow: hidden;
       background: #111 center/contain no-repeat;
       display: inline-flex; align-items: center; justify-content: center;
       cursor: grab; user-select: none; touch-action: none; position: relative;
@@ -112,17 +109,14 @@
       border:1px solid #666; border-radius:8px;
     }
     button:hover { background:#181818; }
-    .small { font-size: 0.9rem; color:#bbb; }
-
     .mobile-controls { display:flex; gap:8px; margin-top:6px; }
     .mobile-controls.hidden { display:none; }
   </style>
 </head>
 <body>
   <div class="app">
-    <!-- Tip: numbered steps -->
     <div class="tip">
-        Move items from the Palette (bottom) into tiers, then click ‘Fill Google Form.’ Page 2 will be prefilled with your tier list. Palette items aren’t submitted. Your list is saved between visits.
+      Move items from the Palette (bottom) into tiers, then click ‘Fill Google Form.’ Page 2 will be prefilled with your tier list. Palette items aren’t submitted. Your list is saved between visits.
     </div>
 
     <!-- Tiers -->
@@ -167,7 +161,8 @@
         <button id="fillBtn">Fill Google Form</button>
         <button id="exportBtn" title="Export your current placements to a shareable token">Export Tier List</button>
         <button id="importBtn" title="Import a previously exported token">Import Tier List</button>
-        <button id="resetBtn" title="Move all items back to the palette">Reset</button>
+        <button id="shareBtn"  title="Create an image of Top3/High/Mid/Low for sharing">Share Tier List</button>
+        <button id="resetBtn"  title="Move all items back to the palette">Reset</button>
       </div>
       <div class="row-head"><h2>Palette</h2></div>
       <div id="palette" class="palette" data-tier="palette" aria-label="Palette"></div>
@@ -175,12 +170,9 @@
   </div>
 
   <script>
-    // ---------- Utils / Errors ----------
-    function alertWithContact(msg) {
-      alert(msg + "\n\nPlease notify @dovemail on Discord about this error");
-    }
+    // ---------- Utils ----------
+    function alertWithContact(msg) { alert(msg + "\n\nPlease notify @dovemail on Discord about this error"); }
     function alertSimple(msg) { alert(msg); }
-
     function getParam(name) {
       const fromHash = new URLSearchParams((location.hash || "").replace(/^#/, ""));
       if (fromHash.has(name)) return fromHash.get(name);
@@ -196,7 +188,8 @@
           throw new Error("Each pokemon item must be [displayName, entryId, imageFile]");
         }
         const [displayName, entryId, imageFile] = item;
-        const imgUrl = `https://www.serebii.net/pokemonsleep/pokemon/icon/${imageFile}`;
+        // same-origin icons folder
+        const imgUrl = new URL(`icons/${imageFile}`, location.href).href;
         return { name: displayName, entryId, imgUrl };
       });
     }
@@ -287,27 +280,18 @@
         return null;
       }
     }
-    function clearPlacements() {
-      try { localStorage.removeItem(STORAGE_KEY); } catch(e){}
-    }
+    function clearPlacements() { try { localStorage.removeItem(STORAGE_KEY); } catch(e){} }
 
     // ---------- Export / Import ----------
     const TOKEN_PREFIX = "STFv1:";
     function exportToken() {
-      const payload = {
-        v: 1,
-        placements: getPlacementsObject()
-      };
+      const payload = { v: 1, placements: getPlacementsObject() };
       const json = JSON.stringify(payload);
       if (!window.LZString) { alertWithContact("LZString missing; cannot export."); return; }
       const token = TOKEN_PREFIX + LZString.compressToEncodedURIComponent(json);
-      // Try to copy; also show for manual copy
       if (navigator.clipboard && window.isSecureContext) {
-        navigator.clipboard.writeText(token).then(()=>{
-          alertSimple("Tier list exported to clipboard.\n\nYou can paste this token to import later.");
-        }).catch(()=>{
-          prompt("Copy your tier list token:", token);
-        });
+        navigator.clipboard.writeText(token).then(()=> alertSimple("Tier list exported to clipboard.\n\nYou can paste this token to import later."))
+        .catch(()=> prompt("Copy your tier list token:", token));
       } else {
         prompt("Copy your tier list token:", token);
       }
@@ -324,7 +308,6 @@
         if (!json) throw new Error("Decompression failed");
         const data = JSON.parse(json);
         if (!data || data.v !== 1 || !data.placements) throw new Error("Invalid payload");
-
         applyPlacements(data.placements);
         savePlacements();
         updateTierHeadersAndCaps();
@@ -337,13 +320,9 @@
 
     function applyPlacements(obj) {
       const { palette, top3, high, mid, low, ni } = tierElements();
-      // First move everything to palette, then lay down by order
       const all = [top3, high, mid, low, ni].flatMap(el => Array.from(el.querySelectorAll('.icon')));
       all.forEach(el => palette.appendChild(el));
-
-      // Map current icons by name
       const byName = new Map(Array.from(palette.querySelectorAll('.icon')).map(el => [el.dataset.id, el]));
-
       const apply = (arr, container) => (arr || []).forEach(name => {
         const el = byName.get(name);
         if (el) container.appendChild(el);
@@ -357,11 +336,10 @@
 
     // ---------- Drag & Drop + Mobile behaviors ----------
     const isCoarse = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
-
     let dragState = { draggingEl: null, originContainer: null, ghostEl: null };
     let mobileTargetTier = null;
 
-    // Auto-scroll while dragging (mobile)
+    // Mobile auto-scroll
     let autoScrollRAF = null, autoScrollDir = 0, lastTouchX = 0, lastTouchY = 0;
     const EDGE_THRESHOLD = 60, MAX_SPEED = 14;
     function startAutoScroll() {
@@ -385,10 +363,7 @@
     }
     function stopAutoScroll() {
       autoScrollDir = 0;
-      if (autoScrollRAF !== null) {
-        cancelAnimationFrame(autoScrollRAF);
-        autoScrollRAF = null;
-      }
+      if (autoScrollRAF !== null) { cancelAnimationFrame(autoScrollRAF); autoScrollRAF = null; }
     }
     function updateAutoScrollDirection(clientY) {
       const vh = window.innerHeight;
@@ -433,7 +408,7 @@
       el.dataset.id = item.name; el.dataset.entryId = item.entryId;
       el.setAttribute('aria-label', item.name);
       const img = document.createElement('img');
-      img.alt = item.name; img.src = item.imgUrl;
+      img.alt = item.name; img.src = item.imgUrl; img.crossOrigin = 'anonymous'; img.loading = 'lazy';
       el.appendChild(img);
 
       // Desktop drag
@@ -503,7 +478,6 @@
 
           if (mobileTargetTier) {
             mobileTargetTier.classList.remove('targeting');
-            // if same tier as source, don't append (keep position)
             if (mobileTargetTier !== dragState.originContainer) {
               mobileTargetTier.appendChild(el);
             }
@@ -532,7 +506,7 @@
     }
 
     function setupDragAndDrop() {
-      if (isCoarse) return; // mobile uses custom behavior
+      if (isCoarse) return;
       const droppables = document.querySelectorAll('.palette, .tier');
       droppables.forEach(container => {
         container.addEventListener('dragover', (e) => {
@@ -561,12 +535,9 @@
       });
     }
 
-    // ---------- Generation (tier-direct) ----------
+    // ---------- Prefill ----------
     function generatePrefill(parsed, iconData) {
-      if (anyTierOverCap()) {
-        alertSimple("One or more rows exceed their maximum. Please adjust before generating.");
-        return;
-      }
+      if (anyTierOverCap()) { alertSimple("One or more rows exceed their maximum. Please adjust before generating."); return; }
       const { top3: top3El, high: highEl, mid: midEl, low: lowEl } = tierElements();
       const getNames = el => Array.from(el.querySelectorAll('.icon')).map(i => i.dataset.id);
 
@@ -590,8 +561,204 @@
       const base = parsed.url;
       if (!base) { alertWithContact("Missing form base `url` in data."); return; }
       const theLink = `${base}?${params.toString()}`;
-      console.log("Prefill URL:", theLink);
       window.open(theLink, "_blank");
+    }
+
+    // ---------- Share Image (Top3/High/Mid/Low) ----------
+    async function shareTop4TiersAsImage() {
+      try {
+        const { top3, high, mid, low } = tierElements();
+        const tierOrder = [
+          { key:'top3', label:'Top 3',  el: top3,  color: getComputedStyle(document.documentElement).getPropertyValue('--pastel-red')  || 'rgba(111,16,26,0.72)' },
+          { key:'high', label:'High',   el: high,  color: getComputedStyle(document.documentElement).getPropertyValue('--pastel-yellow')|| 'rgba(73,58,10,0.72)' },
+          { key:'mid',  label:'Mid',    el: mid,   color: getComputedStyle(document.documentElement).getPropertyValue('--pastel-green') || 'rgba(9,49,28,0.72)' },
+          { key:'low',  label:'Low',    el: low,   color: getComputedStyle(document.documentElement).getPropertyValue('--pastel-teal')  || 'rgba(6,41,36,0.72)' },
+        ];
+
+        // Collect icons + caps
+        const tiers = tierOrder.map(t => {
+          const icons = Array.from(t.el.querySelectorAll('.icon')).map(icon => {
+            const img = icon.querySelector('img');
+            return { name: icon.dataset.id || img?.alt || '', src: img?.src || '' };
+          });
+          const cap = t.el.dataset.max ? parseInt(t.el.dataset.max, 10) : null;
+          return { ...t, icons, cap };
+        });
+
+        // Layout
+        const padding = 24;       // outer page padding
+        const sectionGap = 18;
+        const headerHeight = 40;
+        const corner = 18;
+        const gutter = 8;
+
+        const cols = 10;           // always 8 columns wide
+        // choose nice width; icons scale to fit 8 columns
+        const targetPageWidth = 1080; // exported image width (approx)
+        const cell = Math.floor((targetPageWidth - padding*2 - gutter*(cols-1)) / cols);
+        const iconSize = Math.max(56, Math.min(96, cell));
+        const innerPad = 16;      // inner L/R padding inside each row card
+
+        // build data URLs from same-origin images (no fetch)
+        function toDataURL_viaImage(url) {
+          return new Promise((resolve) => {
+            if (!url) return resolve(null);
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.src = new URL(url, location.href).href;
+            img.onload = () => {
+              try {
+                const w = img.naturalWidth || img.width || 64;
+                const h = img.naturalHeight || img.height || 64;
+                const canvas = document.createElement('canvas');
+                canvas.width = Math.max(1, w);
+                canvas.height = Math.max(1, h);
+                const ctx = canvas.getContext('2d', { willReadFrequently: true });
+                ctx.drawImage(img, 0, 0);
+                resolve(canvas.toDataURL('image/png'));
+              } catch (_) { resolve(null); }
+            };
+            img.onerror = () => resolve(null);
+          });
+        }
+        async function mapLimit(arr, limit, fn) {
+          const out = new Array(arr.length);
+          let i = 0;
+          const workers = new Array(Math.min(limit, arr.length)).fill(0).map(async () => {
+            while (i < arr.length) {
+              const idx = i++;
+              out[idx] = await fn(arr[idx], idx);
+            }
+          });
+          await Promise.all(workers);
+          return out;
+        }
+
+        // Prepare images
+        const flatIcons = tiers.flatMap((t, ti) => t.icons.map((ic, ii) => ({ ti, ii, ...ic })));
+        const fetched = await mapLimit(flatIcons, 8, async (item) => {
+          const dataUrl = item.src ? await toDataURL_viaImage(item.src) : null;
+          return { ...item, dataUrl };
+        });
+        fetched.forEach(({ti, ii, dataUrl}) => { tiers[ti].icons[ii].dataUrl = dataUrl; });
+
+        // Fixed full-width card for 8 columns
+        const gridWFull = cols * iconSize + (cols - 1) * gutter;
+        const sectionWFull = gridWFull + innerPad * 2;
+
+        // measure vertical size
+        function rowsFor(n){ return Math.ceil(Math.max(1, n) / cols); }
+        const sectionHeights = tiers.map(t => {
+          const rows = rowsFor(t.icons.length);
+          const gridH = rows * iconSize + (rows - 1) * gutter;
+          return headerHeight + 12 + gridH + padding;
+        });
+        const totalHeight = padding + sectionHeights.reduce((a,b)=>a + b + sectionGap, 0) - sectionGap + padding;
+
+        // SVG helpers
+        function esc(s){ return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+        let _clipIdCounter = 0;
+        function nextClipId(){ return `clip${Date.now().toString(36)}_${_clipIdCounter++}`; }
+        function roundedRectClip(x, y, w, h, r, id){
+          return `<clipPath id="${id}"><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${r}" ry="${r}"/></clipPath>`;
+        }
+
+        // Build SVG (all rows span full width)
+        const svgWidth = padding + sectionWFull + padding;
+        let y = padding;
+        let svg = [];
+        svg.push(
+          `<svg xmlns="http://www.w3.org/2000/svg" width="${svgWidth}" height="${totalHeight}" viewBox="0 0 ${svgWidth} ${totalHeight}">`,
+          `<rect width="100%" height="100%" fill="#000"/>`,
+          `<style>
+            .title{font:600 22px system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif; fill:#fff}
+            .name{font:600 15px system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif; fill:#eee}
+          </style>`
+        );
+
+        for (const t of tiers) {
+          const count = t.icons.length;
+          const rows = rowsFor(count);
+          const gridH = rows * iconSize + (rows - 1) * gutter;
+          const sectionH = headerHeight + 12 + gridH + padding;
+
+          const x = padding;
+          const gridX = x + innerPad;
+          const gy = y + headerHeight + 12;
+
+          // full-width card (8 columns)
+          svg.push(
+            `<rect x="${x}" y="${y}" rx="18" ry="18" width="${sectionWFull}" height="${sectionH}" fill="${t.color || 'rgba(255,255,255,0.08)'}" stroke="rgba(255,255,255,0.12)"/>`
+          );
+
+          // header label with counts
+          const label = t.cap ? `${t.label} (${count}/${t.cap})` : `${t.label} (${count})`;
+          svg.push(`<text x="${gridX}" y="${y + 28}" class="title">${esc(label)}</text>`);
+
+          // draw icons
+          t.icons.forEach((ic, idx) => {
+            const c = idx % cols;
+            const r = Math.floor(idx / cols);
+            const X = gridX + c * (iconSize + gutter);
+            const Y = gy +  r * (iconSize + gutter);
+
+            svg.push(`<rect x="${X}" y="${Y}" width="${iconSize}" height="${iconSize}" rx="12" ry="12" fill="#0f1111" stroke="#2a2a2a"/>`);
+            const clipId = nextClipId();
+            svg.push(roundedRectClip(X, Y, iconSize, iconSize, 12, clipId));
+
+            if (ic.dataUrl) {
+              svg.push(`<image x="${X}" y="${Y}" width="${iconSize}" height="${iconSize}" preserveAspectRatio="xMidYMid meet" href="${ic.dataUrl}" clip-path="url(#${clipId})"/>`);
+            } else {
+              const initials = (ic.name || '').split(/\s+/).map(s=>s[0]).join('').slice(0,3).toUpperCase() || '—';
+              svg.push(`<text x="${X + iconSize/2}" y="${Y + iconSize/2 + 6}" text-anchor="middle" class="name">${esc(initials)}</text>`);
+            }
+          });
+
+          y += sectionH + sectionGap;
+        }
+
+        svg.push(`</svg>`);
+        const svgBlob = new Blob([svg.join('')], { type: 'image/svg+xml' });
+        const svgUrl = URL.createObjectURL(svgBlob);
+
+        // rasterize
+        const img = new Image();
+        img.decoding = 'async';
+        img.onload = async () => {
+          try {
+            const canvas = document.createElement('canvas');
+            canvas.width = svgWidth;
+            canvas.height = totalHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.imageSmoothingQuality = 'high';
+            ctx.drawImage(img, 0, 0);
+
+            canvas.toBlob(async (pngBlob) => {
+              if (!pngBlob) throw new Error('PNG creation failed');
+              const pngFile = new File([pngBlob], 'tier-list.png', { type: 'image/png' });
+
+              if (navigator.canShare && navigator.canShare({ files: [pngFile] })) {
+                await navigator.share({ files: [pngFile], title: 'My Tier List', text: 'Top 3 / High / Mid / Low' });
+              } else {
+                const url = URL.createObjectURL(pngBlob);
+                const a = document.createElement('a');
+                a.href = url; a.download = 'tier-list.png';
+                document.body.appendChild(a); a.click(); a.remove();
+                URL.revokeObjectURL(url);
+                alertSimple('PNG saved. You can share it anywhere 💫');
+              }
+            }, 'image/png');
+          } finally {
+            URL.revokeObjectURL(svgUrl);
+          }
+        };
+        img.onerror = () => { URL.revokeObjectURL(svgUrl); alertWithContact('Could not render image preview.'); };
+        img.src = svgUrl;
+
+      } catch (e) {
+        console.error(e);
+        alertWithContact('Failed to create share image: ' + e.message);
+      }
     }
 
     // ---------- Reset ----------
@@ -622,7 +789,7 @@
             const icons = convertToIconData(parsed);
             const { palette, top3, high, mid, low, ni } = tierElements();
 
-            // Render all icons to palette
+            // render all icons to palette
             const byName = new Map();
             icons.forEach(item => {
               const el = makeIconEl(item);
@@ -630,7 +797,7 @@
               byName.set(item.name, el);
             });
 
-            // Restore placements
+            // restore placements
             const saved = loadPlacements();
             if (saved) {
               const apply = (arr, container) => (arr || []).forEach(name => {
@@ -653,8 +820,9 @@
             document.getElementById('resetBtn').addEventListener('click', resetAllToPalette);
             document.getElementById('exportBtn').addEventListener('click', exportToken);
             document.getElementById('importBtn').addEventListener('click', importTokenFlow);
+            document.getElementById('shareBtn').addEventListener('click', shareTop4TiersAsImage);
 
-            // Tap outside to clear mobile selection
+            // tap outside to clear mobile selection
             document.addEventListener('click', (e)=>{
               const isCoarse = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
               if (isCoarse && selectedIcon && !e.target.closest('.icon') && !e.target.closest('.mobile-controls')) {
@@ -677,5 +845,3 @@
   </script>
 </body>
 </html>
-
-
