@@ -5,49 +5,110 @@
     <meta charset="utf-8">
 </head>
 <body>
-    <h1>Form Link</h1>
+    <h1>Step 1: Fill Sleep Sprint Form Link</h1>
     <!-- Prefilled with your existing value -->
     <textarea id="htmlInput4" rows="1" cols="100">https://docs.google.com/forms/d/e/1FAIpQLSfgDq6VMxEZ-asWgDp8zF3ahhh1LR4aIoLHUre0VM6eJDf_hA/viewform</textarea>
     <br><br>
 
-    <h1>Google Forms Entry ID Extractor</h1>
-
-    <!-- Helper: copies "view-source:<form URL>" to clipboard -->
-    <button id="copyFormViewSrcBtn" onclick="copyFormViewSource()">
-        Copy 'view-source:' form URL (visit the page, and then paste below the HTML code)
-    </button>
-    <span id="formCopyStatus" style="display:none; color:green; margin-left:8px;">copied!</span>
+    <h1>Step 2: Google Forms Entry ID Extractor</h1>
+    You need to copy and paste the source code of the Google Form into this box.<p>
+    Page link: <a id="formLink" href="https://docs.google.com/forms/d/e/1FAIpQLSfgDq6VMxEZ-asWgDp8zF3ahhh1LR4aIoLHUre0VM6eJDf_hA/viewform" target="_blank">https://docs.google.com/forms/d/e/1FAIpQLSfgDq6VMxEZ-asWgDp8zF3ahhh1LR4aIoLHUre0VM6eJDf_hA/viewform</a>
     <br><br>
 
     <textarea id="htmlInput1" placeholder="Paste the Google Forms HTML here..." rows="5" cols="60"></textarea>
     <br><br>
 
-    <h1>Pokémon Sleep Data Extractor</h1>
-
-    <!-- Helper: copies Serebii 'view-source:' URL to clipboard -->
-    <button id="copySerebiiViewSrcBtn" onclick="copySerebiiViewSource()">
-        Copy 'view-source:' Serebii URL (visit the page, and then paste below the HTML code)
-    </button>
-    <span id="serebiiCopyStatus" style="display:none; color:green; margin-left:8px;">copied!</span>
+    <h1>Step 3: Pokémon Sleep Data Extractor</h1>
+    You need to copy and paste the source code of the Serebii "Available Pokemon" page into this box.<p>
+    Page link: <a href="https://www.serebii.net/pokemonsleep/pokemon.shtml" target="_blank">https://www.serebii.net/pokemonsleep/pokemon.shtml</a>
     <br><br>
 
     <textarea id="htmlInput2" rows="5" cols="60" placeholder="Paste Serebii HTML content here..."></textarea>
     <br><br>
-
-    <h1>Pokemon Ordering (optional)</h1>
+    <h1>Step 4: Pokemon Ordering (optional)</h1>
+    This just changes the Pokemon order of the Palette (not within the tiers if they're already set). I just set it to the sprint list as a good default.<p> 
     <textarea id="htmlInput3" rows="10" cols="60" placeholder="Mudkip
 Treecko
-Chansey"></textarea>
+Larvitar
+Chansey
+Dratini
+Wooper
+Grubbin
+Shinx
+Aron
+Bulbasaur
+Squirtle
+Farfetch'd
+Dedenne
+Torchic
+Fuecoco
+Snover
+Sneasel
+Cyndaquil
+Stufful
+Sprigatito
+Cramorant
+Bellsprout
+Charmander
+Quaxly
+Chikorita
+Totodile
+Magnemite
+Mimikyu
+Pawmi
+Mareep
+Vulpix
+Spheal
+Plusle
+Minun
+Eevee
+Pikachu" value="Mudkip
+Treecko
+Larvitar
+Chansey
+Dratini
+Wooper
+Grubbin
+Shinx
+Aron
+Bulbasaur
+Squirtle
+Farfetch'd
+Dedenne
+Torchic
+Fuecoco
+Snover
+Sneasel
+Cyndaquil
+Stufful
+Sprigatito
+Cramorant
+Bellsprout
+Charmander
+Quaxly
+Chikorita
+Totodile
+Magnemite
+Mimikyu
+Pawmi
+Mareep
+Vulpix
+Spheal
+Plusle
+Minun
+Eevee
+Pikachu"></textarea>
     <br><br>
 
-    <button onclick="extractData()">Extract Data</button>
+    <h1>Step 5: Extract Data and Generate Page</h1>
+    <button onclick="extractData()">Click</button>
 
     <div id="resultArea" style="display: none;">
-        <br><br>
+        <br>
         <h2>Generated URL:</h2>
         <textarea id="urlOutput" rows="3" cols="100" readonly></textarea>
-        <br><br>
-        <button onclick="copyToClipboard()">Copy URL</button>
+
+    <h1>Step 6: Shorten URL</h1>
         <button onclick="shortenUrl()">Shorten with is.gd</button>
 
         <div id="shortUrlArea" style="display: none;">
@@ -62,6 +123,17 @@ Chansey"></textarea>
     <br><br>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.4.4/lz-string.min.js"></script>
     <script>
+        // NEW: Update the Step 2 link dynamically
+        const formTextarea = document.getElementById('htmlInput4');
+        const formLink = document.getElementById('formLink');
+        formTextarea.addEventListener('input', () => {
+            const url = formTextarea.value.trim();
+            if (url) {
+                formLink.href = url;
+                formLink.textContent = url;
+            }
+        });
+
         function copyTextToClipboard(text) {
             if (!text) return Promise.reject(new Error('Nothing to copy'));
             if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -80,32 +152,6 @@ Chansey"></textarea>
                 document.body.removeChild(t);
                 return Promise.reject(e);
             }
-        }
-
-        function showCopied(id) {
-            const el = document.getElementById(id);
-            if (!el) return;
-            el.style.display = 'inline';
-            setTimeout(() => { el.style.display = 'none'; }, 1500);
-        }
-
-        function copyFormViewSource() {
-            const formURL = (document.getElementById('htmlInput4').value || '').trim();
-            if (!formURL) {
-                alert('Please enter the form URL first.');
-                return;
-            }
-            const viewSrc = 'view-source:' + formURL;
-            copyTextToClipboard(viewSrc)
-                .then(() => showCopied('formCopyStatus'))
-                .catch(() => alert('Could not copy. Please try again.'));
-        }
-
-        function copySerebiiViewSource() {
-            const viewSrc = 'view-source:https://www.serebii.net/pokemonsleep/pokemon.shtml';
-            copyTextToClipboard(viewSrc)
-                .then(() => showCopied('serebiiCopyStatus'))
-                .catch(() => alert('Could not copy. Please try again.'));
         }
 
         function extractEntryIdsData(htmlContent) {
