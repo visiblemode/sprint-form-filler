@@ -779,7 +779,7 @@ Import Tier List</button>
               const pngFile = new File([pngBlob], 'tier-list.png', { type: 'image/png' });
 
               if (navigator.canShare && navigator.canShare({ files: [pngFile] })) {
-                await navigator.share({ files: [pngFile], title: 'My Tier List', text: '' });
+                await navigator.share({ files: [pngFile], title: '', text: '' });
               } else {
                 const url = URL.createObjectURL(pngBlob);
                 const a = document.createElement('a');
@@ -886,4 +886,5 @@ Import Tier List</button>
   </script>
 </body>
 </html>
+
 
