@@ -161,7 +161,7 @@
       <div class="controls">
         <button id="fillBtn">✍️ Fill Google Form</button>
         <button id="shareBtn"  title="Create an image of Top3/High/Mid/Low for sharing">🖼️
-Create Tier List Image</button>
+Create Tier List Image (Experimental)</button>
         <button id="importBtn" title="Import a previously exported token">🔼
 Import Tier List</button>
         <button id="exportBtn" title="Export your current placements to a shareable token">🔽 Export Tier List</button>
@@ -246,14 +246,18 @@ Import Tier List</button>
       });
     }
 
-    function anyTierOverCap() {
-      const tiers = document.querySelectorAll('.tier');
-      for (const tier of tiers) {
-        const cap = tier.dataset.max ? parseInt(tier.dataset.max, 10) : null;
-        const count = tier.querySelectorAll('.icon').length;
-        if (cap && count > cap) return true;
-      }
-      return false;
+    // NEW: helpers to check specific overcap states
+    function isOverCap(el) {
+      const cap = el.dataset.max ? parseInt(el.dataset.max, 10) : null;
+      if (!cap) return false;
+      const count = el.querySelectorAll('.icon').length;
+      return count > cap;
+    }
+    function overcapStatus() {
+      const { top3, high, mid, low } = tierElements();
+      const top3Over = isOverCap(top3);
+      const othersOver = (!top3Over) && (isOverCap(high) || isOverCap(mid) || isOverCap(low));
+      return { top3Over, othersOver };
     }
 
     // ---------- Persistence ----------
@@ -479,17 +483,17 @@ Import Tier List</button>
             return;
           }
 
-            if (mobileTargetTier) {
-              mobileTargetTier.classList.remove('targeting');
+          if (mobileTargetTier) {
+            mobileTargetTier.classList.remove('targeting');
 
-              if (mobileTargetTier !== dragState.originContainer) {
-                if (mobileTargetTier.dataset && mobileTargetTier.dataset.tier === 'palette') {
-                  mobileTargetTier.insertBefore(el, mobileTargetTier.firstElementChild || null);
-                } else {
-                  mobileTargetTier.appendChild(el);
-                }
+            if (mobileTargetTier !== dragState.originContainer) {
+              if (mobileTargetTier.dataset && mobileTargetTier.dataset.tier === 'palette') {
+                mobileTargetTier.insertBefore(el, mobileTargetTier.firstElementChild || null);
+              } else {
+                mobileTargetTier.appendChild(el);
               }
             }
+          }
           mobileTargetTier = null;
           dragState.draggingEl = null;
           dragState.originContainer = null;
@@ -537,13 +541,12 @@ Import Tier List</button>
           const dragging = dragState.draggingEl; if (!dragging) return;
           const ghost = dragState.ghostEl;
 
-          // NEW: if palette, always prepend to the beginning
+          // palette: always prepend
           const isPalette = container.dataset && container.dataset.tier === 'palette';
           if (isPalette) {
             if (ghost) { ghost.remove(); dragState.ghostEl = null; }
             container.insertBefore(dragging, container.firstElementChild || null);
           } else {
-            // keep existing behavior for tiers
             if (ghost && ghost.parentElement === container) {
               container.insertBefore(dragging, ghost);
               ghost.remove(); dragState.ghostEl = null;
@@ -559,14 +562,25 @@ Import Tier List</button>
 
     // ---------- Prefill ----------
     function generatePrefill(parsed, iconData) {
-      if (anyTierOverCap()) { alertSimple("One or more rows exceed their maximum. Please adjust before generating."); return; }
-      const { top3: top3El, high: highEl, mid: midEl, low: lowEl } = tierElements();
+      // NEW: gating logic per your spec
+      const { top3, high, mid, low } = tierElements();
+      const { top3Over, othersOver } = overcapStatus();
+
+      if (top3Over) {
+        alertSimple("Cannot generate form — more than 3 Pokémon in Top 3 row.");
+        return;
+      }
+      if (othersOver) {
+        const ok = confirm("One or more rows are over the limit.\nThis will reduce the efficacy of your vote for that tier.\n\nDo you want to continue?");
+        if (!ok) return;
+      }
+
       const getNames = el => Array.from(el.querySelectorAll('.icon')).map(i => i.dataset.id);
 
-      const top3Names = getNames(top3El);
-      const highNames = getNames(highEl);
-      const midNames  = getNames(midEl);
-      const lowNames  = getNames(lowEl);
+      const top3Names = getNames(top3);
+      const highNames = getNames(high);
+      const midNames  = getNames(mid);
+      const lowNames  = getNames(low);
 
       const nameToEntry = new Map(iconData.map(o => [o.name, o.entryId]));
       const params = new URLSearchParams();
@@ -607,21 +621,17 @@ Import Tier List</button>
           return { ...t, icons, cap };
         });
 
-        // Layout
-        const padding = 24;       // outer page padding
+        // Layout + render (unchanged)
+        const padding = 24;
         const sectionGap = 18;
         const headerHeight = 40;
-        const corner = 18;
         const gutter = 8;
-
-        const cols = 5;           // always COLS columns wide
-        // choose nice width; icons scale to fit COLs columns
-        const targetPageWidth = 1080; // exported image width (approx)
+        const cols = 5;
+        const targetPageWidth = 1080;
         const cell = Math.floor((targetPageWidth - padding*2 - gutter*(cols-1)) / cols);
         const iconSize = Math.max(56, Math.min(96, cell));
-        const innerPad = 16;      // inner L/R padding inside each row card
+        const innerPad = 16;
 
-        // build data URLs from same-origin images (no fetch)
         function toDataURL_viaImage(url) {
           return new Promise((resolve) => {
             if (!url) return resolve(null);
@@ -656,7 +666,6 @@ Import Tier List</button>
           return out;
         }
 
-        // Prepare images
         const flatIcons = tiers.flatMap((t, ti) => t.icons.map((ic, ii) => ({ ti, ii, ...ic })));
         const fetched = await mapLimit(flatIcons, 8, async (item) => {
           const dataUrl = item.src ? await toDataURL_viaImage(item.src) : null;
@@ -664,11 +673,9 @@ Import Tier List</button>
         });
         fetched.forEach(({ti, ii, dataUrl}) => { tiers[ti].icons[ii].dataUrl = dataUrl; });
 
-        // Fixed full-width card for 8 columns
         const gridWFull = cols * iconSize + (cols - 1) * gutter;
         const sectionWFull = gridWFull + innerPad * 2;
 
-        // measure vertical size
         function rowsFor(n){ return Math.ceil(Math.max(1, n) / cols); }
         const sectionHeights = tiers.map(t => {
           const rows = rowsFor(t.icons.length);
@@ -677,7 +684,6 @@ Import Tier List</button>
         });
         const totalHeight = padding + sectionHeights.reduce((a,b)=>a + b + sectionGap, 0) - sectionGap + padding;
 
-        // SVG helpers
         function esc(s){ return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
         let _clipIdCounter = 0;
         function nextClipId(){ return `clip${Date.now().toString(36)}_${_clipIdCounter++}`; }
@@ -685,7 +691,6 @@ Import Tier List</button>
           return `<clipPath id="${id}"><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${r}" ry="${r}"/></clipPath>`;
         }
 
-        // Build SVG (all rows span full width)
         const svgWidth = padding + sectionWFull + padding;
         let y = padding;
         let svg = [];
@@ -708,16 +713,13 @@ Import Tier List</button>
           const gridX = x + innerPad;
           const gy = y + headerHeight + 12;
 
-          // full-width card (8 columns)
           svg.push(
             `<rect x="${x}" y="${y}" rx="18" ry="18" width="${sectionWFull}" height="${sectionH}" fill="${t.color || 'rgba(255,255,255,0.08)'}" stroke="rgba(255,255,255,0.12)"/>`
           );
 
-          // header label with counts
           const label = t.cap ? `${t.label} (${count}/${t.cap})` : `${t.label} (${count})`;
           svg.push(`<text x="${gridX}" y="${y + 28}" class="title">${esc(label)}</text>`);
 
-          // draw icons
           t.icons.forEach((ic, idx) => {
             const c = idx % cols;
             const r = Math.floor(idx / cols);
@@ -736,14 +738,13 @@ Import Tier List</button>
             }
           });
 
-          y += sectionH + sectionGap;
+          y += sectionH + 18;
         }
 
         svg.push(`</svg>`);
         const svgBlob = new Blob([svg.join('')], { type: 'image/svg+xml' });
         const svgUrl = URL.createObjectURL(svgBlob);
 
-        // rasterize
         const img = new Image();
         img.decoding = 'async';
         img.onload = async () => {
@@ -760,7 +761,7 @@ Import Tier List</button>
               const pngFile = new File([pngBlob], 'tier-list.png', { type: 'image/png' });
 
               if (navigator.canShare && navigator.canShare({ files: [pngFile] })) {
-                await navigator.share({ files: [pngFile], title: 'My Tier List', text: 'Top 3 / High / Mid / Low' });
+                await navigator.share({ files: [pngFile], title: 'My Tier List', text: '' });
               } else {
                 const url = URL.createObjectURL(pngBlob);
                 const a = document.createElement('a');
@@ -867,5 +868,3 @@ Import Tier List</button>
   </script>
 </body>
 </html>
-
-
