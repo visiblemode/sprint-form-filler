@@ -231,6 +231,20 @@ Import Tier List</button>
       };
     }
 
+    async function preloadImages(urls) {
+      // unique, truthy URLs only
+      const list = Array.from(new Set(urls.filter(Boolean)));
+      await Promise.all(
+        list.map(src => new Promise(resolve => {
+          const img = new Image();
+          // be permissive: resolve on load OR error so we never hang
+          img.onload = resolve;
+          img.onerror = resolve;
+          img.src = src;
+        }))
+      );
+    }
+
     function updateTierHeadersAndCaps() {
       const tiers = document.querySelectorAll('.tier');
       const hdr = headerSpans();
@@ -601,6 +615,7 @@ Import Tier List</button>
     }
 
     // ---------- Share Image (Top3/High/Mid/Low) ----------
+  
     async function shareTop4TiersAsImage() {
       try {
         const { top3, high, mid, low } = tierElements();
@@ -627,7 +642,7 @@ Import Tier List</button>
         const headerHeight = 40;
         const gutter = 8;
         const cols = 5;
-        const targetPageWidth = 1080;
+        const targetPageWidth = 720;
         const cell = Math.floor((targetPageWidth - padding*2 - gutter*(cols-1)) / cols);
         const iconSize = Math.max(56, Math.min(96, cell));
         const innerPad = 16;
@@ -666,6 +681,9 @@ Import Tier List</button>
           return out;
         }
 
+        const allSrcs = tiers.flatMap(t => t.icons.map(ic => ic.src));
+        await preloadImages(allSrcs);
+        
         const flatIcons = tiers.flatMap((t, ti) => t.icons.map((ic, ii) => ({ ti, ii, ...ic })));
         const fetched = await mapLimit(flatIcons, 8, async (item) => {
           const dataUrl = item.src ? await toDataURL_viaImage(item.src) : null;
@@ -868,3 +886,4 @@ Import Tier List</button>
   </script>
 </body>
 </html>
+
