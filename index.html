@@ -267,11 +267,18 @@ Import Tier List</button>
       const count = el.querySelectorAll('.icon').length;
       return count > cap;
     }
+    function isUnderCap(el) {
+      const cap = el.dataset.max ? parseInt(el.dataset.max, 10) : null;
+      if (!cap) return false;
+      const count = el.querySelectorAll('.icon').length;
+      return count < cap;
+    }
     function overcapStatus() {
       const { top3, high, mid, low } = tierElements();
       const top3Over = isOverCap(top3);
+      const top3Under = isUnderCap(top3);
       const othersOver = (!top3Over) && (isOverCap(high) || isOverCap(mid) || isOverCap(low));
-      return { top3Over, othersOver };
+      return { top3Over, top3Under, othersOver };
     }
 
     // ---------- Persistence ----------
@@ -578,12 +585,16 @@ Import Tier List</button>
     function generatePrefill(parsed, iconData) {
       // NEW: gating logic per your spec
       const { top3, high, mid, low } = tierElements();
-      const { top3Over, othersOver } = overcapStatus();
+      const { top3Over, top3Under, othersOver } = overcapStatus();
 
       if (top3Over) {
         alertSimple("Cannot generate form — more than 3 Pokémon in Top 3 row.");
         return;
       }
+      if (top3Under) {
+        alertSimple("Cannot generate form — 3 Pokémon required in Top 3 row.");
+        return;
+      }      
       if (othersOver) {
         const ok = confirm("One or more rows are over the limit.\nThis will reduce the efficacy of your vote for that tier.\n\nDo you want to continue?");
         if (!ok) return;
@@ -886,5 +897,6 @@ Import Tier List</button>
   </script>
 </body>
 </html>
+
 
 
