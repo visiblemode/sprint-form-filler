@@ -6,28 +6,28 @@
 </head>
 <body>
     <h1>Step 1: Fill Sleep Sprint Form Link</h1>
-    <!-- Prefilled with your existing value -->
     <textarea id="htmlInput4" rows="1" cols="100">https://docs.google.com/forms/d/e/1FAIpQLSfgDq6VMxEZ-asWgDp8zF3ahhh1LR4aIoLHUre0VM6eJDf_hA/viewform</textarea>
     <br><br>
 
-    <h1>Step 2: Google Forms Entry ID Extractor</h1>
-    You need to copy and paste the source code of the Google Form into this box.<p>
+    <h1>Step 2: Choose ONE input</h1>
     Page link: <a id="formLink" href="https://docs.google.com/forms/d/e/1FAIpQLSfgDq6VMxEZ-asWgDp8zF3ahhh1LR4aIoLHUre0VM6eJDf_hA/viewform" target="_blank">https://docs.google.com/forms/d/e/1FAIpQLSfgDq6VMxEZ-asWgDp8zF3ahhh1LR4aIoLHUre0VM6eJDf_hA/viewform</a>
-    <br><br>
-
+    <p><strong>A)</strong> Paste the Google Form HTML (to auto-extract entryIds):</p>
     <textarea id="htmlInput1" placeholder="Paste the Google Forms HTML here..." rows="5" cols="60"></textarea>
+    <p><strong>OR</strong></p>
+    <p><strong>B)</strong> Paste a list of Pokémon, one per line (entryIds will be null):</p>
+    <textarea id="pokemonListInput" placeholder="Pikachu&#10;Eevee&#10;..." rows="5" cols="60"></textarea>
+    <small id="step2Notice" style="display:block;margin-top:6px;color:#666;">Type in one box to disable the other.</small>
     <br><br>
 
-    <h1>Step 3: Pokémon Sleep Data Extractor</h1>
-    You need to copy and paste the source code of the Serebii "Available Pokemon" page into this box.<p>
-    Page link: <a href="https://www.serebii.net/pokemonsleep/pokemon.shtml" target="_blank">https://www.serebii.net/pokemonsleep/pokemon.shtml</a>
+    <h1>Step 3: Pokémon Sleep Icons (Serebii)</h1>
+    Paste source of Serebii “Available Pokémon” page.<br>
+    Link: <a href="https://www.serebii.net/pokemonsleep/pokemon.shtml" target="_blank">https://www.serebii.net/pokemonsleep/pokemon.shtml</a>
     <br><br>
-
     <textarea id="htmlInput2" rows="5" cols="60" placeholder="Paste Serebii HTML content here..."></textarea>
     <br><br>
-    <h1>Step 4: Pokemon Ordering (optional)</h1>
-    This just changes the Pokemon order of the Palette (not within the tiers if they're already set). I just set it to the sprint list as a good default.<p> 
-    <textarea id="htmlInput3" rows="10" cols="60" placeholder="Mudkip
+
+    <h1>Step 4: Pokémon Ordering (optional)</h1>
+    <textarea id="htmlInput3" rows="10" cols="60" placeholder="One name per line to prefer ordering...">Mudkip
 Treecko
 Larvitar
 Chansey
@@ -62,42 +62,7 @@ Spheal
 Plusle
 Minun
 Eevee
-Pikachu" value="Mudkip
-Treecko
-Larvitar
-Chansey
-Dratini
-Wooper
-Grubbin
-Shinx
-Aron
-Bulbasaur
-Squirtle
-Farfetch'd
-Dedenne
-Torchic
-Fuecoco
-Snover
-Sneasel
-Cyndaquil
-Stufful
-Sprigatito
-Cramorant
-Bellsprout
-Charmander
-Quaxly
-Chikorita
-Totodile
-Magnemite
-Mimikyu
-Pawmi
-Mareep
-Vulpix
-Spheal
-Plusle
-Minun
-Eevee
-Pikachu"></textarea>
+Pikachu</textarea>
     <br><br>
 
     <h1>Step 5: Extract Data and Generate Page</h1>
@@ -108,7 +73,7 @@ Pikachu"></textarea>
         <h2>Generated URL:</h2>
         <textarea id="urlOutput" rows="3" cols="100" readonly></textarea>
 
-    <h1>Step 6: Shorten URL</h1>
+        <h1>Step 6: Shorten URL</h1>
         <button onclick="shortenUrl()">Shorten with is.gd</button>
 
         <div id="shortUrlArea" style="display: none;">
@@ -123,7 +88,7 @@ Pikachu"></textarea>
     <br><br>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.4.4/lz-string.min.js"></script>
     <script>
-        // NEW: Update the Step 2 link dynamically
+        // Step 1 link updater
         const formTextarea = document.getElementById('htmlInput4');
         const formLink = document.getElementById('formLink');
         formTextarea.addEventListener('input', () => {
@@ -134,12 +99,32 @@ Pikachu"></textarea>
             }
         });
 
+        // Step 2 mutual exclusion
+        const gfHTML = document.getElementById('htmlInput1');
+        const listBox = document.getElementById('pokemonListInput');
+        function updateStep2Locks() {
+            const hasForm = gfHTML.value.trim().length > 0;
+            const hasList = listBox.value.trim().length > 0;
+            if (hasForm && !hasList) {
+                listBox.disabled = true;
+                gfHTML.disabled = false;
+            } else if (hasList && !hasForm) {
+                gfHTML.disabled = true;
+                listBox.disabled = false;
+            } else {
+                // neither or both -> enable both so user can fix
+                gfHTML.disabled = false;
+                listBox.disabled = false;
+            }
+        }
+        gfHTML.addEventListener('input', updateStep2Locks);
+        listBox.addEventListener('input', updateStep2Locks);
+
         function copyTextToClipboard(text) {
             if (!text) return Promise.reject(new Error('Nothing to copy'));
             if (navigator.clipboard && navigator.clipboard.writeText) {
                 return navigator.clipboard.writeText(text);
             }
-            // Fallback
             const t = document.createElement('textarea');
             t.value = text;
             document.body.appendChild(t);
@@ -167,7 +152,6 @@ Pikachu"></textarea>
                 const pokemonNames = [];
 
                 questions.forEach(question => {
-                    const questionId = question[0];
                     const questionTitle = question[1];
                     const questionType = question[3];
                     const entries = question[4];
@@ -223,57 +207,94 @@ Pikachu"></textarea>
 
         function extractData() {
             const googleFormHTML = document.getElementById('htmlInput1').value;
+            const pokemonListRaw = document.getElementById('pokemonListInput').value;
             const serebiiHTML = document.getElementById('htmlInput2').value;
             const orderingText = document.getElementById('htmlInput3').value.trim();
             const formURL = document.getElementById('htmlInput4').value.trim();
 
-            if (!googleFormHTML.trim() || !serebiiHTML.trim() || !formURL.trim()) {
-                alert('Please paste content in all required inputs');
+            // ✨ Trim trailing spaces from each line
+            const cleanedPokemonList = pokemonListRaw
+                .split('\n')
+                .map(line => line.replace(/\s+$/g, '')) // remove trailing whitespace
+                .join('\n');
+            document.getElementById('pokemonListInput').value = cleanedPokemonList;
+
+            if (!formURL.trim()) {
+                alert('Please provide the Google Form URL in Step 1.');
+                return null;
+            }
+            if (!serebiiHTML.trim()) {
+                alert('Please paste Serebii HTML in Step 3 for icons.');
+                return null;
+            }
+
+            const usingForm = googleFormHTML.trim().length > 0;
+            const usingList = cleanedPokemonList.trim().length > 0;
+
+            if (usingForm && usingList) {
+                alert('Please use only ONE input in Step 2 (Form HTML OR Pokémon list).');
+                return null;
+            }
+            if (!usingForm && !usingList) {
+                alert('Please provide either the Form HTML or a Pokémon list in Step 2.');
                 return null;
             }
 
             try {
-                const entryIds = extractEntryIdsData(googleFormHTML);
-                if (!entryIds) return null;
-
                 const iconData = extractSerebii(serebiiHTML);
 
+                // Build result shell
                 const result = {
-                    top1: entryIds.top1,
-                    top2: entryIds.top2,
-                    top3: entryIds.top3,
+                    top1: null,
+                    top2: null,
+                    top3: null,
                     url: formURL,
                     pokemon: []
                 };
 
-                const formPokemon = new Set(entryIds.pokemon || []);
-                let pokemonOrder = [];
-                if (orderingText) {
-                    pokemonOrder = orderingText.split('\n')
-                        .map(line => line.trim())
-                        .filter(line => line.length > 0 && formPokemon.has(line));
+                let availableNames = [];
+                let entryIds = null;
+
+                if (usingForm) {
+                    entryIds = extractEntryIdsData(googleFormHTML);
+                    if (!entryIds) return null;
+
+                    result.top1 = entryIds.top1 || null;
+                    result.top2 = entryIds.top2 || null;
+                    result.top3 = entryIds.top3 || null;
+                    availableNames = Array.from(new Set(entryIds.pokemon || []));
+                } else {
+                    // Using list only; keep tops as null and all per-Pokémon entryIds null
+                    availableNames = cleanedPokemonList
+                        .split('\n')
+                        .map(s => s.trim())
+                        .filter(Boolean);
                 }
 
-                const uncoveredPokemon = Array.from(formPokemon)
-                    .filter(name => !pokemonOrder.includes(name))
-                    .sort();
+                // Apply optional ordering: keep only names that are available
+                let preferredOrder = [];
+                if (orderingText) {
+                    preferredOrder = orderingText.split('\n').map(s => s.trim()).filter(Boolean);
+                }
+                const availableSet = new Set(availableNames);
+                const ordered = preferredOrder.filter(n => availableSet.has(n));
+                const remaining = availableNames.filter(n => !ordered.includes(n)).sort();
+                const finalOrder = [...ordered, ...remaining];
 
-                const finalOrder = [...pokemonOrder, ...uncoveredPokemon];
-
-                finalOrder.forEach(pokemonName => {
-                    const entryId = entryIds[pokemonName];
-                    const iconPath = iconData[pokemonName];
-                    if (entryId) {
-                        if (iconPath) {
-                            const filename = iconPath.split('/').pop();
-                            result.pokemon.push([pokemonName, entryId, filename]);
-                        } else {
-                            console.warn('No icon found for ' + pokemonName);
-                            result.pokemon.push([pokemonName, entryId, null]);
-                        }
+                // Populate result.pokemon
+                finalOrder.forEach(name => {
+                    const filename = iconData[name] ? iconData[name].split('/').pop() : null;
+                    const id = usingForm ? (entryIds[name] || null) : null;
+                    if (!iconData[name]) {
+                        console.warn('No icon found for ' + name);
                     }
+                    result.pokemon.push([name, id, filename]);
                 });
 
+                // NEW: print final result before minimization
+                console.log('Final result before compression:', JSON.stringify(result, null, 2));
+
+                // Compress + URL
                 const compressed = LZString.compressToEncodedURIComponent(JSON.stringify(result));
                 const generatedUrl = `https://visiblemode.github.io/sprint-form-filler/#data=${compressed}`;
 
@@ -290,18 +311,6 @@ Pikachu"></textarea>
                 console.error('Error extracting data:', error);
                 return null;
             }
-        }
-
-        function copyToClipboard() {
-            const urlOutput = document.getElementById('urlOutput');
-            urlOutput.select();
-            urlOutput.setSelectionRange(0, 99999);
-            navigator.clipboard.writeText(urlOutput.value).then(() => {
-                alert('URL copied to clipboard!');
-            }).catch(() => {
-                document.execCommand('copy');
-                alert('URL copied to clipboard!');
-            });
         }
 
         function copyShortUrl() {

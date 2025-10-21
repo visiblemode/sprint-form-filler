@@ -39,6 +39,11 @@
       -ms-user-select: none;
     }
 
+    /* strike-through helper and disabled look */
+    .strike { text-decoration: line-through; }
+    #fillBtn[disabled] { opacity: 0.55; cursor: not-allowed; filter: saturate(0.5); }
+
+
     h2 { margin: 12px 0 6px; font-size: 1rem; color:#fff; }
     .app { display: grid; gap: 16px; }
 
@@ -193,6 +198,7 @@ Import Tier List</button>
         const [displayName, entryId, imageFile] = item;
         // same-origin icons folder
         const imgUrl = new URL(`icons/${imageFile}`, location.href).href;
+        console.log({ name: displayName, entryId, imgUrl })
         return { name: displayName, entryId, imgUrl };
       });
     }
@@ -231,20 +237,6 @@ Import Tier List</button>
       };
     }
 
-    async function preloadImages(urls) {
-      // unique, truthy URLs only
-      const list = Array.from(new Set(urls.filter(Boolean)));
-      await Promise.all(
-        list.map(src => new Promise(resolve => {
-          const img = new Image();
-          // be permissive: resolve on load OR error so we never hang
-          img.onload = resolve;
-          img.onerror = resolve;
-          img.src = src;
-        }))
-      );
-    }
-
     function updateTierHeadersAndCaps() {
       const tiers = document.querySelectorAll('.tier');
       const hdr = headerSpans();
@@ -267,18 +259,11 @@ Import Tier List</button>
       const count = el.querySelectorAll('.icon').length;
       return count > cap;
     }
-    function isUnderCap(el) {
-      const cap = el.dataset.max ? parseInt(el.dataset.max, 10) : null;
-      if (!cap) return false;
-      const count = el.querySelectorAll('.icon').length;
-      return count < cap;
-    }
     function overcapStatus() {
       const { top3, high, mid, low } = tierElements();
       const top3Over = isOverCap(top3);
-      const top3Under = isUnderCap(top3);
       const othersOver = (!top3Over) && (isOverCap(high) || isOverCap(mid) || isOverCap(low));
-      return { top3Over, top3Under, othersOver };
+      return { top3Over, othersOver };
     }
 
     // ---------- Persistence ----------
@@ -585,16 +570,12 @@ Import Tier List</button>
     function generatePrefill(parsed, iconData) {
       // NEW: gating logic per your spec
       const { top3, high, mid, low } = tierElements();
-      const { top3Over, top3Under, othersOver } = overcapStatus();
+      const { top3Over, othersOver } = overcapStatus();
 
       if (top3Over) {
         alertSimple("Cannot generate form — more than 3 Pokémon in Top 3 row.");
         return;
       }
-      if (top3Under) {
-        alertSimple("Cannot generate form — 3 Pokémon required in Top 3 row.");
-        return;
-      }      
       if (othersOver) {
         const ok = confirm("One or more rows are over the limit.\nThis will reduce the efficacy of your vote for that tier.\n\nDo you want to continue?");
         if (!ok) return;
@@ -626,7 +607,6 @@ Import Tier List</button>
     }
 
     // ---------- Share Image (Top3/High/Mid/Low) ----------
-  
     async function shareTop4TiersAsImage() {
       try {
         const { top3, high, mid, low } = tierElements();
@@ -653,7 +633,7 @@ Import Tier List</button>
         const headerHeight = 40;
         const gutter = 8;
         const cols = 5;
-        const targetPageWidth = 720;
+        const targetPageWidth = 1080;
         const cell = Math.floor((targetPageWidth - padding*2 - gutter*(cols-1)) / cols);
         const iconSize = Math.max(56, Math.min(96, cell));
         const innerPad = 16;
@@ -692,9 +672,6 @@ Import Tier List</button>
           return out;
         }
 
-        const allSrcs = tiers.flatMap(t => t.icons.map(ic => ic.src));
-        await preloadImages(allSrcs);
-        
         const flatIcons = tiers.flatMap((t, ti) => t.icons.map((ic, ii) => ({ ti, ii, ...ic })));
         const fetched = await mapLimit(flatIcons, 8, async (item) => {
           const dataUrl = item.src ? await toDataURL_viaImage(item.src) : null;
@@ -790,7 +767,7 @@ Import Tier List</button>
               const pngFile = new File([pngBlob], 'tier-list.png', { type: 'image/png' });
 
               if (navigator.canShare && navigator.canShare({ files: [pngFile] })) {
-                await navigator.share({ files: [pngFile], title: '', text: '' });
+                await navigator.share({ files: [pngFile], title: 'My Tier List', text: '' });
               } else {
                 const url = URL.createObjectURL(pngBlob);
                 const a = document.createElement('a');
@@ -837,6 +814,30 @@ Import Tier List</button>
             const json = LZString.decompressFromEncodedURIComponent(dataParam);
             if (!json) throw new Error("Decompression produced empty result");
             const parsed = JSON.parse(json);
+
+            // --- Voting gate: disable Fill button if top1/top2/top3 are all null-ish ---
+            const fillBtn = document.getElementById('fillBtn');
+            // treat null or undefined as "unset"
+            const top1Unset = (parsed.top1 == null);
+            const top2Unset = (parsed.top2 == null);
+            const top3Unset = (parsed.top3 == null);
+
+            // only disable when ALL three are unset (your spec)
+            const votingOpen = !(top1Unset && top2Unset && top3Unset);
+
+            if (!votingOpen) {
+              fillBtn.disabled = true;
+              fillBtn.setAttribute('aria-disabled', 'true');
+              // cross out just the label and append the note
+              fillBtn.innerHTML = '✍️ <span class="strike">Fill Google Form</span> Voting not open';
+              fillBtn.title = 'Voting not open';
+            } else {
+              // keep original label in the open state
+              fillBtn.disabled = false;
+              fillBtn.removeAttribute('aria-disabled');
+              fillBtn.innerHTML = '✍️ Fill Google Form';
+              fillBtn.title = 'Open prefilled Google Form';
+            }
 
             const icons = convertToIconData(parsed);
             const { palette, top3, high, mid, low, ni } = tierElements();
@@ -897,6 +898,3 @@ Import Tier List</button>
   </script>
 </body>
 </html>
-
-
-
