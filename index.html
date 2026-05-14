@@ -2,33 +2,23 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Sprint Tier Filler</title>
+  <title>Sprint Tier Voting</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
   <link rel="icon" type="image/x-icon" href="mudkip.ico">
   <script src="lz-string.min.js"></script>
-  <script>
-    (function ensureLZ(){
-      if (!window.LZString) {
-        var s = document.createElement('script');
-        s.src = "https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js";
-        document.head.appendChild(s);
-      }
-    })();
-  </script>
   <style>
-    :root{
-      /* dark, saturated cards (export matches these) */
+    :root {
       --pastel-red:    rgba(111, 16, 26, 0.72);
       --pastel-yellow: rgba(73, 58, 10, 0.72);
-      --pastel-green:  rgba(  9, 49, 28, 0.72);
-      --pastel-teal:   rgba(  6, 41, 36, 0.72);
-      --pastel-grey:   rgba( 32, 32, 32, 0.72);
+      --pastel-green:  rgba(9, 49, 28, 0.72);
+      --pastel-teal:   rgba(6, 41, 36, 0.72);
+      --pastel-grey:   rgba(32, 32, 32, 0.72);
       --overcap-fill:  rgba(220, 53, 69, 0.35);
-      --overcap-border:#dc3545;
+      --overcap-border: #dc3545;
+      --accent: #7eb8f7;
     }
-
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-    html, body { height:100%; touch-action: manipulation; }
+    html, body { height: 100%; touch-action: manipulation; }
     body {
       margin: 12px;
       font-family: system-ui, sans-serif;
@@ -36,22 +26,17 @@
       color: #eee;
       user-select: none;
       -webkit-user-select: none;
-      -ms-user-select: none;
     }
 
-    /* strike-through helper and disabled look */
     .strike { text-decoration: line-through; }
-    #fillBtn[disabled] { opacity: 0.55; cursor: not-allowed; filter: saturate(0.5); }
 
-
-    h2 { margin: 12px 0 6px; font-size: 1rem; color:#fff; }
+    h2 { margin: 12px 0 6px; font-size: 1rem; color: #fff; }
     .app { display: grid; gap: 16px; }
-
-    .tip { color:#ddd; font-size: 0.95rem; }
+    .tip { color: #ddd; font-size: 0.95rem; }
     .row { display: grid; gap: 8px; }
-    .row-head { display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; }
-    .row-head .live { font-weight:600; color:#fff; }
-    .row-head .count { font-variant-numeric: tabular-nums; color:#fff; }
+    .row-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+    .row-head .live { font-weight: 600; color: #fff; }
+    .row-head .count { font-variant-numeric: tabular-nums; color: #fff; }
     .row-head .count.over { color: #ff6464; }
 
     .palette, .tier {
@@ -65,12 +50,11 @@
       position: relative;
       border-radius: 10px;
     }
-
     #tier-top3 { background: var(--pastel-red); }
-    #tier-high { background: var(--pastel-yellow); }
-    #tier-mid  { background: var(--pastel-green); }
-    #tier-low  { background: var(--pastel-teal); }
-    #tier-ni   { background: var(--pastel-grey); }
+    #tier-high  { background: var(--pastel-yellow); }
+    #tier-mid   { background: var(--pastel-green); }
+    #tier-low   { background: var(--pastel-teal); }
+    #tier-ni    { background: var(--pastel-grey); }
 
     .tier.overcap {
       background: var(--overcap-fill) !important;
@@ -108,22 +92,99 @@
       to   { box-shadow: 0 0 12px 3px rgba(255,255,255,0.25); }
     }
 
-    .controls { display:flex; gap:8px; align-items:center; flex-wrap: wrap; }
+    .controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
     button {
       padding: 8px 12px;
-      background:#111; color:#eee;
-      border:1px solid #666; border-radius:8px;
+      background: #111; color: #eee;
+      border: 1px solid #666; border-radius: 8px;
+      cursor: pointer;
     }
-    button:hover { background:#181818; }
-    .mobile-controls { display:flex; gap:8px; margin-top:6px; }
-    .mobile-controls.hidden { display:none; }
+    button:hover:not(:disabled) { background: #181818; }
+    button:disabled { opacity: 0.55; cursor: not-allowed; filter: saturate(0.5); }
+
+    .mobile-controls { display: flex; gap: 8px; margin-top: 6px; }
+    .mobile-controls.hidden { display: none; }
+
+    /* ---------- Auth bar ---------- */
+    #auth-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
+      background: #0d1117;
+      border: 1px solid #333;
+      border-radius: 10px;
+      flex-wrap: wrap;
+    }
+    #auth-bar .avatar {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      border: 2px solid #444;
+    }
+    #auth-bar .username { font-weight: 600; color: #fff; font-size: 0.95rem; }
+    #auth-bar .logout-btn {
+      margin-left: auto;
+      font-size: 0.8rem;
+      padding: 4px 8px;
+      color: #aaa;
+      border-color: #444;
+    }
+    #discord-login-btn {
+      background: #5865F2;
+      color: #fff;
+      border: none;
+      padding: 9px 16px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    #discord-login-btn:hover { background: #4752c4; }
+    #discord-login-btn svg { flex-shrink: 0; }
+
+    /* ---------- Submit button & status ---------- */
+    #submitBtn {
+      background: #1a3a1a;
+      border-color: #3a7a3a;
+      color: #7eff7e;
+      font-weight: 600;
+    }
+    #submitBtn:hover:not(:disabled) { background: #1f4a1f; }
+
+    #submit-status {
+      font-size: 0.9rem;
+      padding: 6px 10px;
+      border-radius: 8px;
+      display: none;
+    }
+    #submit-status.loading { display: block; color: #aaa; }
+    #submit-status.success { display: block; color: #7eff7e; background: rgba(0,80,0,0.3); border: 1px solid #3a7a3a; }
+    #submit-status.error   { display: block; color: #ff8080; background: rgba(80,0,0,0.3); border: 1px solid #7a3a3a; }
+
+    /* ---------- Loading skeleton ---------- */
+    #loading-msg { color: #888; font-size: 0.9rem; padding: 8px 0; }
   </style>
 </head>
 <body>
   <div class="app">
-    <div class="tip">
-      Move items from the Palette (bottom) into tiers, then click ‘Fill Google Form.’ Page 2 will be prefilled with your tier list. Palette items aren’t submitted. Your list is saved between visits.
+
+    <!-- Auth bar -->
+    <div id="auth-bar">
+      <button id="discord-login-btn">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z"/>
+        </svg>
+        Login with Discord to vote
+      </button>
     </div>
+
+    <div class="tip" id="tip-text">
+      Log in with Discord, then move Pokémon from the Palette into tiers and click Submit Vote. Your layout is saved between visits.
+    </div>
+
+    <div id="loading-msg">Loading Pokémon list…</div>
 
     <!-- Tiers -->
     <section class="row">
@@ -155,746 +216,573 @@
     </section>
 
     <section class="row">
-      <div class="row-head">
-        <h2>Not Interested</h2>
-      </div>
+      <div class="row-head"><h2>Not Interested</h2></div>
       <div id="tier-ni" class="tier" data-tier="ni" aria-label="Not Interested"></div>
     </section>
 
     <!-- Controls + Palette -->
     <section class="row">
       <div class="controls">
-        <button id="fillBtn">✍️ Fill Google Form</button>
-        <button id="shareBtn"  title="Create an image of Top3/High/Mid/Low for sharing">🖼️
-Create Tier List Image (Experimental)</button>
-        <button id="importBtn" title="Import a previously exported token">🔼
-Import Tier List</button>
-        <button id="exportBtn" title="Export your current placements to a shareable token">🔽 Export Tier List</button>
+        <button id="submitBtn" disabled>✅ Submit Vote</button>
+        <div id="submit-status"></div>
+        <button id="exportBtn" title="Export your current placements to a shareable token">🔽 Export Layout</button>
+        <button id="importBtn" title="Import a previously exported token">🔼 Import Layout</button>
         <button id="resetBtn"  title="Move all items back to the palette">🧼 Reset</button>
       </div>
       <div class="row-head"><h2>Palette</h2></div>
       <div id="palette" class="palette" data-tier="palette" aria-label="Palette"></div>
     </section>
+
   </div>
 
   <script>
-    // ---------- Utils ----------
-    function alertWithContact(msg) { alert(msg + "\n\nPlease notify @dovemail on Discord about this error"); }
-    function alertSimple(msg) { alert(msg); }
-    function getParam(name) {
-      const fromHash = new URLSearchParams((location.hash || "").replace(/^#/, ""));
-      if (fromHash.has(name)) return fromHash.get(name);
-      const fromQuery = new URLSearchParams(location.search);
-      if (fromQuery.has(name)) return fromQuery.get(name);
-      return null;
-    }
+  // ================================================================
+  // CONFIG — fill these in
+  // ================================================================
+  const DISCORD_CLIENT_ID   = "1504274560902496347";
+  const DISCORD_REDIRECT_URI = location.origin + location.pathname; // this page
+  const APPS_SCRIPT_URL     = "https://script.google.com/macros/s/AKfycbxWCntPIC0QWgpFfllJbS4sPbpRCNwXcKm9zmaGoTeVOInF5uRey76Hvfe0e4Vb00ltzQ/exec";
 
-    function convertToIconData(parsed) {
-      if (!Array.isArray(parsed.pokemon)) throw new Error("`pokemon` must be an array");
-      return parsed.pokemon.map(item => {
-        if (!Array.isArray(item) || item.length < 3) {
-          throw new Error("Each pokemon item must be [displayName, entryId, imageFile]");
-        }
-        const [displayName, entryId, imageFile] = item;
-        // same-origin icons folder
-        const imgUrl = new URL(`icons/${imageFile}`, location.href).href;
-        console.log({ name: displayName, entryId, imgUrl })
-        return { name: displayName, entryId, imgUrl };
-      });
-    }
+  // Google Sheet CSV — columns: Name | Sleep Type | Image filename (e.g. 006.png)
+  const SHEET_BASE = "https://docs.google.com/spreadsheets/u/1/d/e/2PACX-1vR7NTU850u2PQcbEjH36NrDDrlLXvHdM25x0-GRsOkZDKaMBrhWIq-Npxo8mxKXBVZI8z1QSu0do9Uo/pub?output=csv";
+  const SHEET1_GID = "920212433";
+  const IMAGE_BASE = "https://www.serebii.net/pokemonsleep/pokemon/icon/"; // trailing slash
 
-    function findInsertionPoint(container, clientX) {
-      const children = Array.from(container.querySelectorAll('.icon'));
-      let closest = null, closestOffset = Number.POSITIVE_INFINITY;
-      for (const child of children) {
-        const rect = child.getBoundingClientRect();
-        const mid = rect.left + rect.width / 2;
-        const offset = clientX - mid;
-        if (offset < 0 && Math.abs(offset) < closestOffset) {
-          closestOffset = Math.abs(offset);
-          closest = child;
-        }
+  // ================================================================
+  // Utils
+  // ================================================================
+  function alertWithContact(msg) { alert(msg + "\n\nPlease notify @dovemail on Discord about this error"); }
+  function alertSimple(msg) { alert(msg); }
+
+  function tierElements() {
+    return {
+      palette: document.getElementById('palette'),
+      top3: document.getElementById('tier-top3'),
+      high: document.getElementById('tier-high'),
+      mid:  document.getElementById('tier-mid'),
+      low:  document.getElementById('tier-low'),
+      ni:   document.getElementById('tier-ni'),
+    };
+  }
+  function headerSpans() {
+    return {
+      top3: document.getElementById('cnt-top3'),
+      high: document.getElementById('cnt-high'),
+      mid:  document.getElementById('cnt-mid'),
+      low:  document.getElementById('cnt-low'),
+    };
+  }
+  function updateTierHeadersAndCaps() {
+    const tiers = document.querySelectorAll('.tier');
+    const hdr = headerSpans();
+    tiers.forEach(tier => {
+      const cap = tier.dataset.max ? parseInt(tier.dataset.max, 10) : null;
+      const count = tier.querySelectorAll('.icon').length;
+      if (cap && count > cap) tier.classList.add('overcap'); else tier.classList.remove('overcap');
+      const key = tier.dataset.tier;
+      if (hdr[key]) {
+        hdr[key].textContent = String(count);
+        if (cap && count > cap) hdr[key].classList.add('over'); else hdr[key].classList.remove('over');
       }
-      return closest;
-    }
+    });
+  }
+  function isOverCap(el) {
+    const cap = el.dataset.max ? parseInt(el.dataset.max, 10) : null;
+    if (!cap) return false;
+    return el.querySelectorAll('.icon').length > cap;
+  }
+  function overcapStatus() {
+    const { top3, high, mid, low } = tierElements();
+    const top3Over = isOverCap(top3);
+    const othersOver = (!top3Over) && (isOverCap(high) || isOverCap(mid) || isOverCap(low));
+    return { top3Over, othersOver };
+  }
 
-    function tierElements() {
-      return {
-        palette: document.getElementById('palette'),
-        top3: document.getElementById('tier-top3'),
-        high: document.getElementById('tier-high'),
-        mid: document.getElementById('tier-mid'),
-        low: document.getElementById('tier-low'),
-        ni: document.getElementById('tier-ni'),
-      };
-    }
-    function headerSpans() {
-      return {
-        top3: document.getElementById('cnt-top3'),
-        high: document.getElementById('cnt-high'),
-        mid:  document.getElementById('cnt-mid'),
-        low:  document.getElementById('cnt-low'),
-      };
-    }
+  // ================================================================
+  // Persistence
+  // ================================================================
+  const STORAGE_KEY = "stf-placements-v1";
+  function getPlacementsObject() {
+    const { top3, high, mid, low, ni } = tierElements();
+    const getNames = el => Array.from(el.querySelectorAll('.icon')).map(i => i.dataset.id);
+    return { top3: getNames(top3), high: getNames(high), mid: getNames(mid), low: getNames(low), ni: getNames(ni) };
+  }
+  function savePlacements() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(getPlacementsObject())); } catch(e){}
+  }
+  function loadPlacements() {
+    try { const r = localStorage.getItem(STORAGE_KEY); return r ? JSON.parse(r) : null; } catch(e){ return null; }
+  }
+  function clearPlacements() { try { localStorage.removeItem(STORAGE_KEY); } catch(e){} }
 
-    function updateTierHeadersAndCaps() {
-      const tiers = document.querySelectorAll('.tier');
-      const hdr = headerSpans();
-      tiers.forEach(tier => {
-        const cap = tier.dataset.max ? parseInt(tier.dataset.max, 10) : null;
-        const count = tier.querySelectorAll('.icon').length;
-        if (cap && count > cap) tier.classList.add('overcap'); else tier.classList.remove('overcap');
-        const key = tier.dataset.tier;
-        if (hdr[key]) {
-          hdr[key].textContent = String(count);
-          if (cap && count > cap) hdr[key].classList.add('over'); else hdr[key].classList.remove('over');
-        }
+  // ================================================================
+  // Export / Import layout tokens
+  // ================================================================
+  const TOKEN_PREFIX = "STFv1:";
+  function exportToken() {
+    const payload = { v: 1, placements: getPlacementsObject() };
+    const token = TOKEN_PREFIX + LZString.compressToEncodedURIComponent(JSON.stringify(payload));
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(token)
+        .then(() => alertSimple("Layout exported to clipboard.\nPaste this token to restore your layout later."))
+        .catch(() => prompt("Copy your layout token:", token));
+    } else {
+      prompt("Copy your layout token:", token);
+    }
+  }
+  function importTokenFlow() {
+    const token = prompt("Paste your layout token:");
+    if (!token) return;
+    try {
+      if (!token.startsWith(TOKEN_PREFIX)) throw new Error("Bad token prefix");
+      const data = JSON.parse(LZString.decompressFromEncodedURIComponent(token.slice(TOKEN_PREFIX.length)));
+      if (!data || data.v !== 1 || !data.placements) throw new Error("Invalid payload");
+      applyPlacements(data.placements);
+      savePlacements();
+      updateTierHeadersAndCaps();
+      alertSimple("Layout imported.");
+    } catch (e) {
+      alertWithContact("Failed to import token: " + e.message);
+    }
+  }
+  function applyPlacements(obj) {
+    const { palette, top3, high, mid, low, ni } = tierElements();
+    [top3, high, mid, low, ni].flatMap(el => Array.from(el.querySelectorAll('.icon'))).forEach(el => palette.appendChild(el));
+    const byName = new Map(Array.from(palette.querySelectorAll('.icon')).map(el => [el.dataset.id, el]));
+    const apply = (arr, container) => (arr || []).forEach(name => { const el = byName.get(name); if (el) container.appendChild(el); });
+    apply(obj.top3, top3); apply(obj.high, high); apply(obj.mid, mid); apply(obj.low, low); apply(obj.ni, ni);
+  }
+
+  // ================================================================
+  // Discord Auth (implicit flow — no backend needed)
+  // ================================================================
+  const AUTH_STORAGE_KEY = "discord-auth-v1";
+
+  function getStoredAuth() {
+    try { const r = localStorage.getItem(AUTH_STORAGE_KEY); return r ? JSON.parse(r) : null; }
+    catch(e){ return null; }
+  }
+  function setStoredAuth(data) {
+    try { localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(data)); } catch(e){}
+  }
+  function clearStoredAuth() {
+    try { localStorage.removeItem(AUTH_STORAGE_KEY); } catch(e){}
+  }
+
+  function buildDiscordAuthUrl() {
+    const params = new URLSearchParams({
+      client_id: DISCORD_CLIENT_ID,
+      redirect_uri: DISCORD_REDIRECT_URI,
+      response_type: "token",
+      scope: "identify",
+    });
+    return `https://discord.com/api/oauth2/authorize?${params}`;
+  }
+
+  async function fetchDiscordUser(accessToken) {
+    const res = await fetch("https://discord.com/api/users/@me", {
+      headers: { Authorization: `Bearer ${accessToken}` }
+    });
+    if (!res.ok) throw new Error("Discord API error: " + res.status);
+    return res.json();
+  }
+
+  let currentUser = null; // { id, username, avatar_url }
+
+  function renderAuthBar(user) {
+    const bar = document.getElementById('auth-bar');
+    if (!user) {
+      bar.innerHTML = `
+        <button id="discord-login-btn">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z"/>
+          </svg>
+          Login with Discord to vote
+        </button>`;
+      document.getElementById('discord-login-btn').addEventListener('click', () => {
+        location.href = buildDiscordAuthUrl();
       });
+      document.getElementById('submitBtn').disabled = true;
+    } else {
+      const avatarUrl = user.avatar
+        ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=64`
+        : `https://cdn.discordapp.com/embed/avatars/0.png`;
+      bar.innerHTML = `
+        <img class="avatar" src="${avatarUrl}" alt="avatar">
+        <span class="username">${escHtml(user.global_name || user.username)}</span>
+        <span style="color:#888;font-size:0.85rem">@${escHtml(user.username)}</span>
+        <button class="logout-btn" id="logout-btn">Log out</button>`;
+      document.getElementById('logout-btn').addEventListener('click', () => {
+        clearStoredAuth();
+        currentUser = null;
+        renderAuthBar(null);
+      });
+      document.getElementById('submitBtn').disabled = false;
     }
+  }
 
-    // NEW: helpers to check specific overcap states
-    function isOverCap(el) {
-      const cap = el.dataset.max ? parseInt(el.dataset.max, 10) : null;
-      if (!cap) return false;
-      const count = el.querySelectorAll('.icon').length;
-      return count > cap;
-    }
-    function overcapStatus() {
-      const { top3, high, mid, low } = tierElements();
-      const top3Over = isOverCap(top3);
-      const othersOver = (!top3Over) && (isOverCap(high) || isOverCap(mid) || isOverCap(low));
-      return { top3Over, othersOver };
-    }
+  function escHtml(s) {
+    return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  }
 
-    // ---------- Persistence ----------
-    const STORAGE_KEY = "stf-placements-v1";
-    function getPlacementsObject() {
-      const { top3, high, mid, low, ni } = tierElements();
-      const getNames = el => Array.from(el.querySelectorAll('.icon')).map(i => i.dataset.id);
-      return {
-        top3: getNames(top3),
-        high: getNames(high),
-        mid:  getNames(mid),
-        low:  getNames(low),
-        ni:   getNames(ni),
-      };
-    }
-    function savePlacements() {
-      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(getPlacementsObject())); }
-      catch(e){ console.warn("Failed to save placements:", e); }
-    }
-    function loadPlacements() {
+  async function initAuth() {
+    // Check for token in URL hash (Discord redirect)
+    const hash = new URLSearchParams(location.hash.replace(/^#/, ''));
+    if (hash.has('access_token')) {
+      const token = hash.get('access_token');
+      const expiresIn = parseInt(hash.get('expires_in') || '604800', 10);
+      const expiresAt = Date.now() + expiresIn * 1000;
+      // Clean up the URL
+      history.replaceState(null, '', location.pathname + location.search);
       try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (!raw) return null;
-        return JSON.parse(raw);
+        const user = await fetchDiscordUser(token);
+        setStoredAuth({ token, expiresAt, user });
+        currentUser = user;
+        renderAuthBar(user);
+        return;
       } catch(e) {
-        console.warn("Failed to load placements:", e);
-        return null;
-      }
-    }
-    function clearPlacements() { try { localStorage.removeItem(STORAGE_KEY); } catch(e){} }
-
-    // ---------- Export / Import ----------
-    const TOKEN_PREFIX = "STFv1:";
-    function exportToken() {
-      const payload = { v: 1, placements: getPlacementsObject() };
-      const json = JSON.stringify(payload);
-      if (!window.LZString) { alertWithContact("LZString missing; cannot export."); return; }
-      const token = TOKEN_PREFIX + LZString.compressToEncodedURIComponent(json);
-      if (navigator.clipboard && window.isSecureContext) {
-        navigator.clipboard.writeText(token).then(()=> alertSimple("Tier list exported to clipboard.\n\nYou can paste this token to import later."))
-        .catch(()=> prompt("Copy your tier list token:", token));
-      } else {
-        prompt("Copy your tier list token:", token);
+        console.error("Discord auth failed:", e);
       }
     }
 
-    function importTokenFlow() {
-      const token = prompt("Paste your tier list token:");
-      if (!token) return;
+    // Check stored auth
+    const stored = getStoredAuth();
+    if (stored && stored.expiresAt > Date.now() + 60000) {
       try {
-        if (!token.startsWith(TOKEN_PREFIX)) throw new Error("Bad token prefix");
-        const encoded = token.slice(TOKEN_PREFIX.length);
-        if (!window.LZString) throw new Error("LZString missing");
-        const json = LZString.decompressFromEncodedURIComponent(encoded);
-        if (!json) throw new Error("Decompression failed");
-        const data = JSON.parse(json);
-        if (!data || data.v !== 1 || !data.placements) throw new Error("Invalid payload");
-        applyPlacements(data.placements);
-        savePlacements();
-        updateTierHeadersAndCaps();
-        alertSimple("Tier list imported.");
-      } catch (e) {
-        console.error(e);
-        alertWithContact("Failed to import token: " + e.message);
+        // Re-verify token is still valid
+        const user = await fetchDiscordUser(stored.token);
+        setStoredAuth({ ...stored, user });
+        currentUser = user;
+        renderAuthBar(user);
+        return;
+      } catch(e) {
+        clearStoredAuth();
       }
     }
 
-    function applyPlacements(obj) {
-      const { palette, top3, high, mid, low, ni } = tierElements();
-      const all = [top3, high, mid, low, ni].flatMap(el => Array.from(el.querySelectorAll('.icon')));
-      all.forEach(el => palette.appendChild(el));
-      const byName = new Map(Array.from(palette.querySelectorAll('.icon')).map(el => [el.dataset.id, el]));
-      const apply = (arr, container) => (arr || []).forEach(name => {
-        const el = byName.get(name);
-        if (el) container.appendChild(el);
-      });
-      apply(obj.top3, top3);
-      apply(obj.high, high);
-      apply(obj.mid,  mid);
-      apply(obj.low,  low);
-      apply(obj.ni,   ni);
-    }
+    renderAuthBar(null);
+  }
 
-    // ---------- Drag & Drop + Mobile behaviors ----------
-    const isCoarse = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
-    let dragState = { draggingEl: null, originContainer: null, ghostEl: null };
-    let mobileTargetTier = null;
+  // ================================================================
+  // Load Pokémon from Google Sheet CSV
+  // ================================================================
+  async function loadPokemonFromSheet() {
+    const url = `${SHEET_BASE}&gid=${SHEET1_GID}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("Failed to fetch sheet: " + res.status);
+    const text = await res.text();
 
-    // Mobile auto-scroll
-    let autoScrollRAF = null, autoScrollDir = 0, lastTouchX = 0, lastTouchY = 0;
-    const EDGE_THRESHOLD = 60, MAX_SPEED = 14;
-    function startAutoScroll() {
-      if (autoScrollRAF !== null) return;
-      const step = () => {
-        if (autoScrollDir !== 0) {
-          window.scrollBy(0, autoScrollDir * MAX_SPEED);
-          const target = document.elementFromPoint(lastTouchX, lastTouchY);
-          const container = target ? target.closest('.tier, .palette') : null;
-          if (container) {
-            if (mobileTargetTier && mobileTargetTier !== container) {
-              mobileTargetTier.classList.remove('targeting');
-            }
-            mobileTargetTier = container;
-            mobileTargetTier.classList.add('targeting');
-          }
-        }
-        autoScrollRAF = requestAnimationFrame(step);
-      };
-      autoScrollRAF = requestAnimationFrame(step);
-    }
-    function stopAutoScroll() {
-      autoScrollDir = 0;
-      if (autoScrollRAF !== null) { cancelAnimationFrame(autoScrollRAF); autoScrollRAF = null; }
-    }
-    function updateAutoScrollDirection(clientY) {
-      const vh = window.innerHeight;
-      if (clientY < EDGE_THRESHOLD) autoScrollDir = -1;
-      else if (clientY > vh - EDGE_THRESHOLD) autoScrollDir = +1;
-      else autoScrollDir = 0;
-      if (autoScrollDir === 0) stopAutoScroll(); else startAutoScroll();
-    }
+    // Parse CSV (simple — names won't have commas)
+    const lines = text.trim().split('\n').slice(1); // skip header
+    return lines
+      .map(line => {
+        const cols = line.split(',');
+        const name = (cols[0] || '').trim().replace(/^"|"$/g, '');
+        const imageFile = (cols[2] || '').trim().replace(/^"|"$/g, '');
+        if (!name || !imageFile) return null;
+        return { name, imgUrl: IMAGE_BASE + imageFile };
+      })
+      .filter(Boolean);
+  }
 
-    // Mobile tap-to-select controls
-    const mobileControls = document.createElement('div');
-    mobileControls.className = 'mobile-controls hidden';
-    const btnUp = document.createElement('button');   btnUp.textContent = 'Move Up';
-    const btnDown = document.createElement('button'); btnDown.textContent = 'Move Down';
-    mobileControls.append(btnUp, btnDown);
+  // ================================================================
+  // Drag & Drop
+  // ================================================================
+  const isCoarse = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
+  let dragState = { draggingEl: null, originContainer: null, ghostEl: null };
+  let mobileTargetTier = null;
+  let autoScrollRAF = null, autoScrollDir = 0, lastTouchX = 0, lastTouchY = 0;
+  const EDGE_THRESHOLD = 60, MAX_SPEED = 14;
 
-    let selectedIcon = null;
-    function clearSelection() {
-      if (selectedIcon) selectedIcon.classList.remove('selected');
-      selectedIcon = null;
-      mobileControls.classList.add('hidden');
-      if (mobileControls.parentElement) mobileControls.parentElement.removeChild(mobileControls);
-    }
-    function moveSelected(dir) {
-      if (!selectedIcon) return;
-      const parent = selectedIcon.parentElement;
-      const kids = Array.from(parent.querySelectorAll('.icon'));
-      const idx = kids.indexOf(selectedIcon);
-      if (idx === -1) return;
-      const newIdx = idx + dir;
-      if (newIdx < 0 || newIdx >= kids.length) return;
-      if (dir < 0) parent.insertBefore(selectedIcon, kids[newIdx]);
-      else parent.insertBefore(selectedIcon, kids[newIdx].nextSibling);
-      updateTierHeadersAndCaps(); savePlacements();
-    }
-    btnUp.addEventListener('click', ()=> moveSelected(-1));
-    btnDown.addEventListener('click',()=> moveSelected(1));
-
-    function makeIconEl(item) {
-      const el = document.createElement('div');
-      el.className = 'icon'; el.draggable = true;
-      el.dataset.id = item.name; el.dataset.entryId = item.entryId;
-      el.setAttribute('aria-label', item.name);
-      const img = document.createElement('img');
-      img.alt = item.name; img.src = item.imgUrl; img.crossOrigin = 'anonymous'; img.loading = 'lazy';
-      el.appendChild(img);
-
-      // Desktop drag
-      el.addEventListener('dragstart', (e) => {
-        if (isCoarse) { e.preventDefault(); return; }
-        dragState.draggingEl = el;
-        dragState.originContainer = el.parentElement;
-        e.dataTransfer.effectAllowed = "move";
-        e.dataTransfer.setData('text/plain', el.dataset.id);
-        requestAnimationFrame(()=>{ el.style.opacity = '0.5'; });
-        clearSelection();
-      });
-      el.addEventListener('dragend', () => {
-        if (isCoarse) return;
-        el.style.opacity = '';
-        dragState.draggingEl = null; dragState.originContainer = null;
-        if (dragState.ghostEl) { dragState.ghostEl.remove(); dragState.ghostEl = null; }
-        updateTierHeadersAndCaps(); savePlacements();
-      });
-
-      // Mobile drag + tap-to-select
-      if (isCoarse) {
-        let startX=0, startY=0, moved=false;
-
-        el.addEventListener('touchstart', (e) => {
-          const t = e.touches[0]; startX = t.clientX; startY = t.clientY; moved=false;
-          dragState.draggingEl = el;
-          dragState.originContainer = el.parentElement;
-          el.style.opacity = '0.7';
-        }, {passive:true});
-
-        el.addEventListener('touchmove', (e) => {
-          const t = e.touches[0];
-          lastTouchX = t.clientX; lastTouchY = t.clientY;
-
-          const dx = Math.abs(t.clientX - startX), dy = Math.abs(t.clientY - startY);
-          if (dx + dy > 8) moved = true;
-
-          updateAutoScrollDirection(t.clientY);
-
-          const target = document.elementFromPoint(t.clientX, t.clientY);
-          const container = target ? target.closest('.tier, .palette') : null;
-          if (!container) return;
-
-          if (mobileTargetTier && mobileTargetTier !== container) {
-            mobileTargetTier.classList.remove('targeting');
-          }
+  function startAutoScroll() {
+    if (autoScrollRAF !== null) return;
+    const step = () => {
+      if (autoScrollDir !== 0) {
+        window.scrollBy(0, autoScrollDir * MAX_SPEED);
+        const target = document.elementFromPoint(lastTouchX, lastTouchY);
+        const container = target ? target.closest('.tier, .palette') : null;
+        if (container) {
+          if (mobileTargetTier && mobileTargetTier !== container) mobileTargetTier.classList.remove('targeting');
           mobileTargetTier = container;
           mobileTargetTier.classList.add('targeting');
-        }, {passive:false});
-
-        el.addEventListener('touchend', () => {
-          el.style.opacity = '';
-          stopAutoScroll();
-
-          if (!moved) {
-            if (selectedIcon === el) { clearSelection(); return; }
-            if (selectedIcon) selectedIcon.classList.remove('selected');
-            selectedIcon = el;
-            el.classList.add('selected');
-            const tier = el.parentElement;
-            tier.after(mobileControls);
-            mobileControls.classList.remove('hidden');
-            updateTierHeadersAndCaps(); savePlacements();
-            return;
-          }
-
-          if (mobileTargetTier) {
-            mobileTargetTier.classList.remove('targeting');
-
-            if (mobileTargetTier !== dragState.originContainer) {
-              if (mobileTargetTier.dataset && mobileTargetTier.dataset.tier === 'palette') {
-                mobileTargetTier.insertBefore(el, mobileTargetTier.firstElementChild || null);
-              } else {
-                mobileTargetTier.appendChild(el);
-              }
-            }
-          }
-          mobileTargetTier = null;
-          dragState.draggingEl = null;
-          dragState.originContainer = null;
-
-          clearSelection();
-          updateTierHeadersAndCaps(); savePlacements();
-        });
-
-        el.addEventListener('touchcancel', () => {
-          el.style.opacity = '';
-          stopAutoScroll();
-          if (mobileTargetTier) mobileTargetTier.classList.remove('targeting');
-          mobileTargetTier = null;
-          dragState.draggingEl = null;
-          dragState.originContainer = null;
-          clearSelection();
-          updateTierHeadersAndCaps();
-        }, {passive:true});
-      }
-
-      return el;
-    }
-
-    function setupDragAndDrop() {
-      if (isCoarse) return;
-      const droppables = document.querySelectorAll('.palette, .tier');
-      droppables.forEach(container => {
-        container.addEventListener('dragover', (e) => {
-          e.preventDefault();
-          const dragging = dragState.draggingEl; if (!dragging) return;
-          if (!dragState.ghostEl) {
-            dragState.ghostEl = document.createElement('div');
-            dragState.ghostEl.className = 'ghost';
-          }
-          if (container.dataset && container.dataset.tier === 'palette') {
-            container.insertBefore(dragState.ghostEl, container.firstElementChild || null);
-          } else {
-            const before = findInsertionPoint(container, e.clientX);
-            if (before) container.insertBefore(dragState.ghostEl, before);
-            else container.appendChild(dragState.ghostEl);
-          }
-        });
-        container.addEventListener('drop', (e) => {
-          e.preventDefault();
-          const dragging = dragState.draggingEl; if (!dragging) return;
-          const ghost = dragState.ghostEl;
-
-          // palette: always prepend
-          const isPalette = container.dataset && container.dataset.tier === 'palette';
-          if (isPalette) {
-            if (ghost) { ghost.remove(); dragState.ghostEl = null; }
-            container.insertBefore(dragging, container.firstElementChild || null);
-          } else {
-            if (ghost && ghost.parentElement === container) {
-              container.insertBefore(dragging, ghost);
-              ghost.remove(); dragState.ghostEl = null;
-            } else {
-              container.appendChild(dragging);
-            }
-          }
-
-          updateTierHeadersAndCaps(); savePlacements();
-        });
-      });
-    }
-
-    // ---------- Prefill ----------
-    function generatePrefill(parsed, iconData) {
-      // NEW: gating logic per your spec
-      const { top3, high, mid, low } = tierElements();
-      const { top3Over, othersOver } = overcapStatus();
-
-      if (top3Over) {
-        alertSimple("Cannot generate form — more than 3 Pokémon in Top 3 row.");
-        return;
-      }
-      if (othersOver) {
-        const ok = confirm("One or more rows are over the limit.\nThis will reduce the efficacy of your vote for that tier.\n\nDo you want to continue?");
-        if (!ok) return;
-      }
-
-      const getNames = el => Array.from(el.querySelectorAll('.icon')).map(i => i.dataset.id);
-
-      const top3Names = getNames(top3);
-      const highNames = getNames(high);
-      const midNames  = getNames(mid);
-      const lowNames  = getNames(low);
-
-      const nameToEntry = new Map(iconData.map(o => [o.name, o.entryId]));
-      const params = new URLSearchParams();
-      params.set('usp', 'pp_url');
-
-      if (parsed.top1 && top3Names[0]) params.set(`entry.${parsed.top1}`, top3Names[0]);
-      if (parsed.top2 && top3Names[1]) params.set(`entry.${parsed.top2}`, top3Names[1]);
-      if (parsed.top3 && top3Names[2]) params.set(`entry.${parsed.top3}`, top3Names[2]);
-
-      for (const n of highNames) { const id = nameToEntry.get(n); if (id) params.append(`entry.${id}`, "high (5max)"); }
-      for (const n of midNames)  { const id = nameToEntry.get(n); if (id) params.append(`entry.${id}`, "medium (10max)"); }
-      for (const n of lowNames)  { const id = nameToEntry.get(n); if (id) params.append(`entry.${id}`, "low (15max)"); }
-
-      const base = parsed.url;
-      if (!base) { alertWithContact("Missing form base `url` in data."); return; }
-      const theLink = `${base}?${params.toString()}`;
-      window.open(theLink, "_blank");
-    }
-
-    // ---------- Share Image (Top3/High/Mid/Low) ----------
-    async function shareTop4TiersAsImage() {
-      try {
-        const { top3, high, mid, low } = tierElements();
-        const tierOrder = [
-          { key:'top3', label:'Top 3',  el: top3,  color: getComputedStyle(document.documentElement).getPropertyValue('--pastel-red')  || 'rgba(111,16,26,0.72)' },
-          { key:'high', label:'High',   el: high,  color: getComputedStyle(document.documentElement).getPropertyValue('--pastel-yellow')|| 'rgba(73,58,10,0.72)' },
-          { key:'mid',  label:'Mid',    el: mid,   color: getComputedStyle(document.documentElement).getPropertyValue('--pastel-green') || 'rgba(9,49,28,0.72)' },
-          { key:'low',  label:'Low',    el: low,   color: getComputedStyle(document.documentElement).getPropertyValue('--pastel-teal')  || 'rgba(6,41,36,0.72)' },
-        ];
-
-        // Collect icons + caps
-        const tiers = tierOrder.map(t => {
-          const icons = Array.from(t.el.querySelectorAll('.icon')).map(icon => {
-            const img = icon.querySelector('img');
-            return { name: icon.dataset.id || img?.alt || '', src: img?.src || '' };
-          });
-          const cap = t.el.dataset.max ? parseInt(t.el.dataset.max, 10) : null;
-          return { ...t, icons, cap };
-        });
-
-        // Layout + render (unchanged)
-        const padding = 24;
-        const sectionGap = 18;
-        const headerHeight = 40;
-        const gutter = 8;
-        const cols = 5;
-        const targetPageWidth = 1080;
-        const cell = Math.floor((targetPageWidth - padding*2 - gutter*(cols-1)) / cols);
-        const iconSize = Math.max(56, Math.min(96, cell));
-        const innerPad = 16;
-
-        function toDataURL_viaImage(url) {
-          return new Promise((resolve) => {
-            if (!url) return resolve(null);
-            const img = new Image();
-            img.crossOrigin = 'anonymous';
-            img.src = new URL(url, location.href).href;
-            img.onload = () => {
-              try {
-                const w = img.naturalWidth || img.width || 64;
-                const h = img.naturalHeight || img.height || 64;
-                const canvas = document.createElement('canvas');
-                canvas.width = Math.max(1, w);
-                canvas.height = Math.max(1, h);
-                const ctx = canvas.getContext('2d', { willReadFrequently: true });
-                ctx.drawImage(img, 0, 0);
-                resolve(canvas.toDataURL('image/png'));
-              } catch (_) { resolve(null); }
-            };
-            img.onerror = () => resolve(null);
-          });
         }
-        async function mapLimit(arr, limit, fn) {
-          const out = new Array(arr.length);
-          let i = 0;
-          const workers = new Array(Math.min(limit, arr.length)).fill(0).map(async () => {
-            while (i < arr.length) {
-              const idx = i++;
-              out[idx] = await fn(arr[idx], idx);
-            }
-          });
-          await Promise.all(workers);
-          return out;
-        }
-
-        const flatIcons = tiers.flatMap((t, ti) => t.icons.map((ic, ii) => ({ ti, ii, ...ic })));
-        const fetched = await mapLimit(flatIcons, 8, async (item) => {
-          const dataUrl = item.src ? await toDataURL_viaImage(item.src) : null;
-          return { ...item, dataUrl };
-        });
-        fetched.forEach(({ti, ii, dataUrl}) => { tiers[ti].icons[ii].dataUrl = dataUrl; });
-
-        const gridWFull = cols * iconSize + (cols - 1) * gutter;
-        const sectionWFull = gridWFull + innerPad * 2;
-
-        function rowsFor(n){ return Math.ceil(Math.max(1, n) / cols); }
-        const sectionHeights = tiers.map(t => {
-          const rows = rowsFor(t.icons.length);
-          const gridH = rows * iconSize + (rows - 1) * gutter;
-          return headerHeight + 12 + gridH + padding;
-        });
-        const totalHeight = padding + sectionHeights.reduce((a,b)=>a + b + sectionGap, 0) - sectionGap + padding;
-
-        function esc(s){ return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
-        let _clipIdCounter = 0;
-        function nextClipId(){ return `clip${Date.now().toString(36)}_${_clipIdCounter++}`; }
-        function roundedRectClip(x, y, w, h, r, id){
-          return `<clipPath id="${id}"><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${r}" ry="${r}"/></clipPath>`;
-        }
-
-        const svgWidth = padding + sectionWFull + padding;
-        let y = padding;
-        let svg = [];
-        svg.push(
-          `<svg xmlns="http://www.w3.org/2000/svg" width="${svgWidth}" height="${totalHeight}" viewBox="0 0 ${svgWidth} ${totalHeight}">`,
-          `<rect width="100%" height="100%" fill="#000"/>`,
-          `<style>
-            .title{font:600 22px system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif; fill:#fff}
-            .name{font:600 15px system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif; fill:#eee}
-          </style>`
-        );
-
-        for (const t of tiers) {
-          const count = t.icons.length;
-          const rows = rowsFor(count);
-          const gridH = rows * iconSize + (rows - 1) * gutter;
-          const sectionH = headerHeight + 12 + gridH + padding;
-
-          const x = padding;
-          const gridX = x + innerPad;
-          const gy = y + headerHeight + 12;
-
-          svg.push(
-            `<rect x="${x}" y="${y}" rx="18" ry="18" width="${sectionWFull}" height="${sectionH}" fill="${t.color || 'rgba(255,255,255,0.08)'}" stroke="rgba(255,255,255,0.12)"/>`
-          );
-
-          const label = t.cap ? `${t.label} (${count}/${t.cap})` : `${t.label} (${count})`;
-          svg.push(`<text x="${gridX}" y="${y + 28}" class="title">${esc(label)}</text>`);
-
-          t.icons.forEach((ic, idx) => {
-            const c = idx % cols;
-            const r = Math.floor(idx / cols);
-            const X = gridX + c * (iconSize + gutter);
-            const Y = gy +  r * (iconSize + gutter);
-
-            svg.push(`<rect x="${X}" y="${Y}" width="${iconSize}" height="${iconSize}" rx="12" ry="12" fill="#0f1111" stroke="#2a2a2a"/>`);
-            const clipId = nextClipId();
-            svg.push(roundedRectClip(X, Y, iconSize, iconSize, 12, clipId));
-
-            if (ic.dataUrl) {
-              svg.push(`<image x="${X}" y="${Y}" width="${iconSize}" height="${iconSize}" preserveAspectRatio="xMidYMid meet" href="${ic.dataUrl}" clip-path="url(#${clipId})"/>`);
-            } else {
-              const initials = (ic.name || '').split(/\s+/).map(s=>s[0]).join('').slice(0,3).toUpperCase() || '—';
-              svg.push(`<text x="${X + iconSize/2}" y="${Y + iconSize/2 + 6}" text-anchor="middle" class="name">${esc(initials)}</text>`);
-            }
-          });
-
-          y += sectionH + 18;
-        }
-
-        svg.push(`</svg>`);
-        const svgBlob = new Blob([svg.join('')], { type: 'image/svg+xml' });
-        const svgUrl = URL.createObjectURL(svgBlob);
-
-        const img = new Image();
-        img.decoding = 'async';
-        img.onload = async () => {
-          try {
-            const canvas = document.createElement('canvas');
-            canvas.width = svgWidth;
-            canvas.height = totalHeight;
-            const ctx = canvas.getContext('2d');
-            ctx.imageSmoothingQuality = 'high';
-            ctx.drawImage(img, 0, 0);
-
-            canvas.toBlob(async (pngBlob) => {
-              if (!pngBlob) throw new Error('PNG creation failed');
-              const pngFile = new File([pngBlob], 'tier-list.png', { type: 'image/png' });
-
-              if (navigator.canShare && navigator.canShare({ files: [pngFile] })) {
-                await navigator.share({ files: [pngFile], title: 'My Tier List', text: '' });
-              } else {
-                const url = URL.createObjectURL(pngBlob);
-                const a = document.createElement('a');
-                a.href = url; a.download = 'tier-list.png';
-                document.body.appendChild(a); a.click(); a.remove();
-                URL.revokeObjectURL(url);
-                alertSimple('PNG saved. You can share it anywhere 💫');
-              }
-            }, 'image/png');
-          } finally {
-            URL.revokeObjectURL(svgUrl);
-          }
-        };
-        img.onerror = () => { URL.revokeObjectURL(svgUrl); alertWithContact('Could not render image preview.'); };
-        img.src = svgUrl;
-
-      } catch (e) {
-        console.error(e);
-        alertWithContact('Failed to create share image: ' + e.message);
       }
-    }
+      autoScrollRAF = requestAnimationFrame(step);
+    };
+    autoScrollRAF = requestAnimationFrame(step);
+  }
+  function stopAutoScroll() {
+    autoScrollDir = 0;
+    if (autoScrollRAF !== null) { cancelAnimationFrame(autoScrollRAF); autoScrollRAF = null; }
+  }
+  function updateAutoScrollDirection(clientY) {
+    const vh = window.innerHeight;
+    if (clientY < EDGE_THRESHOLD) autoScrollDir = -1;
+    else if (clientY > vh - EDGE_THRESHOLD) autoScrollDir = +1;
+    else autoScrollDir = 0;
+    if (autoScrollDir === 0) stopAutoScroll(); else startAutoScroll();
+  }
 
-    // ---------- Reset ----------
-    function resetAllToPalette() {
-      const ok = confirm("Reset all placements and move all items back to the palette?");
-      if (!ok) return;
-      const { palette, top3, high, mid, low, ni } = tierElements();
-      const allPlaced = [top3, high, mid, low, ni].flatMap(el => Array.from(el.querySelectorAll('.icon')));
-      allPlaced.forEach(icon => palette.appendChild(icon));
+  const mobileControls = document.createElement('div');
+  mobileControls.className = 'mobile-controls hidden';
+  const btnUp = document.createElement('button'); btnUp.textContent = 'Move Up';
+  const btnDown = document.createElement('button'); btnDown.textContent = 'Move Down';
+  mobileControls.append(btnUp, btnDown);
+
+  let selectedIcon = null;
+  function clearSelection() {
+    if (selectedIcon) selectedIcon.classList.remove('selected');
+    selectedIcon = null;
+    mobileControls.classList.add('hidden');
+    if (mobileControls.parentElement) mobileControls.parentElement.removeChild(mobileControls);
+  }
+  function moveSelected(dir) {
+    if (!selectedIcon) return;
+    const parent = selectedIcon.parentElement;
+    const kids = Array.from(parent.querySelectorAll('.icon'));
+    const idx = kids.indexOf(selectedIcon);
+    if (idx === -1) return;
+    const newIdx = idx + dir;
+    if (newIdx < 0 || newIdx >= kids.length) return;
+    if (dir < 0) parent.insertBefore(selectedIcon, kids[newIdx]);
+    else parent.insertBefore(selectedIcon, kids[newIdx].nextSibling);
+    updateTierHeadersAndCaps(); savePlacements();
+  }
+  btnUp.addEventListener('click', () => moveSelected(-1));
+  btnDown.addEventListener('click', () => moveSelected(1));
+
+  function findInsertionPoint(container, clientX) {
+    const children = Array.from(container.querySelectorAll('.icon'));
+    let closest = null, closestOffset = Number.POSITIVE_INFINITY;
+    for (const child of children) {
+      const rect = child.getBoundingClientRect();
+      const mid = rect.left + rect.width / 2;
+      const offset = clientX - mid;
+      if (offset < 0 && Math.abs(offset) < closestOffset) { closestOffset = Math.abs(offset); closest = child; }
+    }
+    return closest;
+  }
+
+  function makeIconEl(item) {
+    const el = document.createElement('div');
+    el.className = 'icon'; el.draggable = true;
+    el.dataset.id = item.name;
+    el.setAttribute('aria-label', item.name);
+    const img = document.createElement('img');
+    img.alt = item.name; img.src = item.imgUrl; img.crossOrigin = 'anonymous'; img.loading = 'lazy';
+    el.appendChild(img);
+
+    el.addEventListener('dragstart', (e) => {
+      if (isCoarse) { e.preventDefault(); return; }
+      dragState.draggingEl = el; dragState.originContainer = el.parentElement;
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData('text/plain', el.dataset.id);
+      requestAnimationFrame(() => { el.style.opacity = '0.5'; });
       clearSelection();
-      clearPlacements();
-      updateTierHeadersAndCaps();
-    }
+    });
+    el.addEventListener('dragend', () => {
+      if (isCoarse) return;
+      el.style.opacity = '';
+      dragState.draggingEl = null; dragState.originContainer = null;
+      if (dragState.ghostEl) { dragState.ghostEl.remove(); dragState.ghostEl = null; }
+      updateTierHeadersAndCaps(); savePlacements();
+    });
 
-    // ---------- Boot ----------
-    (function init() {
-      try {
-        const dataParam = getParam('data');
-        if (!dataParam) { alertWithContact("No data parameter found."); return; }
-
-        function proceedWhenLZReady() {
-          if (!window.LZString) { setTimeout(proceedWhenLZReady, 20); return; }
-          try {
-            const json = LZString.decompressFromEncodedURIComponent(dataParam);
-            if (!json) throw new Error("Decompression produced empty result");
-            const parsed = JSON.parse(json);
-
-            // --- Voting gate: disable Fill button if top1/top2/top3 are all null-ish ---
-            const fillBtn = document.getElementById('fillBtn');
-            // treat null or undefined as "unset"
-            const top1Unset = (parsed.top1 == null);
-            const top2Unset = (parsed.top2 == null);
-            const top3Unset = (parsed.top3 == null);
-
-            // only disable when ALL three are unset (your spec)
-            const votingOpen = !(top1Unset && top2Unset && top3Unset);
-
-            if (!votingOpen) {
-              fillBtn.disabled = true;
-              fillBtn.setAttribute('aria-disabled', 'true');
-              // cross out just the label and append the note
-              fillBtn.innerHTML = '✍️ <span class="strike">Fill Google Form</span> Voting not open';
-              fillBtn.title = 'Voting not open';
-            } else {
-              // keep original label in the open state
-              fillBtn.disabled = false;
-              fillBtn.removeAttribute('aria-disabled');
-              fillBtn.innerHTML = '✍️ Fill Google Form';
-              fillBtn.title = 'Open prefilled Google Form';
-            }
-
-            const icons = convertToIconData(parsed);
-            const { palette, top3, high, mid, low, ni } = tierElements();
-
-            // render all icons to palette
-            const byName = new Map();
-            icons.forEach(item => {
-              const el = makeIconEl(item);
-              palette.appendChild(el);
-              byName.set(item.name, el);
-            });
-
-            // restore placements
-            const saved = loadPlacements();
-            if (saved) {
-              const apply = (arr, container) => (arr || []).forEach(name => {
-                const el = byName.get(name); if (el) container.appendChild(el);
-              });
-              apply(saved.top3, top3);
-              apply(saved.high, high);
-              apply(saved.mid,  mid);
-              apply(saved.low,  low);
-              apply(saved.ni,   ni);
-            }
-
-            updateTierHeadersAndCaps();
-            setupDragAndDrop();
-
-            document.getElementById('fillBtn').addEventListener('click', () => {
-              try { generatePrefill(parsed, icons); }
-              catch(e){ console.error(e); alertWithContact("Failed to generate prefill URL: " + e.message); }
-            });
-            document.getElementById('resetBtn').addEventListener('click', resetAllToPalette);
-            document.getElementById('exportBtn').addEventListener('click', exportToken);
-            document.getElementById('importBtn').addEventListener('click', importTokenFlow);
-            document.getElementById('shareBtn').addEventListener('click', shareTop4TiersAsImage);
-
-            // tap outside to clear mobile selection
-            document.addEventListener('click', (e)=>{
-              const isCoarse = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
-              if (isCoarse && selectedIcon && !e.target.closest('.icon') && !e.target.closest('.mobile-controls')) {
-                clearSelection();
-              }
-            });
-
-          } catch (e) {
-            console.error(e);
-            alertWithContact("Failed to decode data: " + e.message);
+    if (isCoarse) {
+      let startX = 0, startY = 0, moved = false;
+      el.addEventListener('touchstart', (e) => {
+        const t = e.touches[0]; startX = t.clientX; startY = t.clientY; moved = false;
+        dragState.draggingEl = el; dragState.originContainer = el.parentElement;
+        el.style.opacity = '0.7';
+      }, { passive: true });
+      el.addEventListener('touchmove', (e) => {
+        const t = e.touches[0]; lastTouchX = t.clientX; lastTouchY = t.clientY;
+        if (Math.abs(t.clientX - startX) + Math.abs(t.clientY - startY) > 8) moved = true;
+        updateAutoScrollDirection(t.clientY);
+        const target = document.elementFromPoint(t.clientX, t.clientY);
+        const container = target ? target.closest('.tier, .palette') : null;
+        if (!container) return;
+        if (mobileTargetTier && mobileTargetTier !== container) mobileTargetTier.classList.remove('targeting');
+        mobileTargetTier = container; mobileTargetTier.classList.add('targeting');
+      }, { passive: false });
+      el.addEventListener('touchend', () => {
+        el.style.opacity = ''; stopAutoScroll();
+        if (!moved) {
+          if (selectedIcon === el) { clearSelection(); return; }
+          if (selectedIcon) selectedIcon.classList.remove('selected');
+          selectedIcon = el; el.classList.add('selected');
+          el.parentElement.after(mobileControls);
+          mobileControls.classList.remove('hidden');
+          updateTierHeadersAndCaps(); savePlacements(); return;
+        }
+        if (mobileTargetTier) {
+          mobileTargetTier.classList.remove('targeting');
+          if (mobileTargetTier !== dragState.originContainer) {
+            if (mobileTargetTier.dataset.tier === 'palette') mobileTargetTier.insertBefore(el, mobileTargetTier.firstElementChild || null);
+            else mobileTargetTier.appendChild(el);
           }
         }
-        proceedWhenLZReady();
+        mobileTargetTier = null; dragState.draggingEl = null; dragState.originContainer = null;
+        clearSelection(); updateTierHeadersAndCaps(); savePlacements();
+      });
+      el.addEventListener('touchcancel', () => {
+        el.style.opacity = ''; stopAutoScroll();
+        if (mobileTargetTier) mobileTargetTier.classList.remove('targeting');
+        mobileTargetTier = null; dragState.draggingEl = null; dragState.originContainer = null;
+        clearSelection(); updateTierHeadersAndCaps();
+      }, { passive: true });
+    }
+    return el;
+  }
 
-      } catch (e) {
-        console.error(e);
-        alertWithContact("Unexpected error: " + e.message);
+  function setupDragAndDrop() {
+    if (isCoarse) return;
+    document.querySelectorAll('.palette, .tier').forEach(container => {
+      container.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        const dragging = dragState.draggingEl; if (!dragging) return;
+        if (!dragState.ghostEl) { dragState.ghostEl = document.createElement('div'); dragState.ghostEl.className = 'ghost'; }
+        if (container.dataset.tier === 'palette') container.insertBefore(dragState.ghostEl, container.firstElementChild || null);
+        else { const before = findInsertionPoint(container, e.clientX); if (before) container.insertBefore(dragState.ghostEl, before); else container.appendChild(dragState.ghostEl); }
+      });
+      container.addEventListener('drop', (e) => {
+        e.preventDefault();
+        const dragging = dragState.draggingEl; if (!dragging) return;
+        const ghost = dragState.ghostEl;
+        if (container.dataset.tier === 'palette') {
+          if (ghost) { ghost.remove(); dragState.ghostEl = null; }
+          container.insertBefore(dragging, container.firstElementChild || null);
+        } else {
+          if (ghost && ghost.parentElement === container) { container.insertBefore(dragging, ghost); ghost.remove(); dragState.ghostEl = null; }
+          else container.appendChild(dragging);
+        }
+        updateTierHeadersAndCaps(); savePlacements();
+      });
+    });
+  }
+
+  // ================================================================
+  // Submit Vote
+  // ================================================================
+  function setStatus(type, msg) {
+    const el = document.getElementById('submit-status');
+    el.className = type;
+    el.textContent = msg;
+  }
+
+  async function submitVote() {
+    if (!currentUser) { alertSimple("Please log in with Discord first."); return; }
+
+    const { top3, high, mid, low } = tierElements();
+    const { top3Over, othersOver } = overcapStatus();
+
+    if (top3Over) { alertSimple("Cannot submit — more than 3 Pokémon in Top 3."); return; }
+    if (othersOver) {
+      const ok = confirm("One or more tiers are over the limit.\nThis reduces the efficacy of your vote for that tier.\n\nContinue anyway?");
+      if (!ok) return;
+    }
+
+    const getNames = el => Array.from(el.querySelectorAll('.icon')).map(i => i.dataset.id);
+    const top3Names = getNames(top3);
+    const highNames = getNames(high);
+    const midNames  = getNames(mid);
+    const lowNames  = getNames(low);
+
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    setStatus('loading', '⏳ Submitting…');
+
+    try {
+      const res = await fetch(APPS_SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          discord_id: currentUser.username,  // or currentUser.id if you prefer
+          top1: top3Names[0] || null,
+          top2: top3Names[1] || null,
+          top3: top3Names[2] || null,
+          highs: highNames,
+          meds:  midNames,
+          lows:  lowNames,
+        })
+      });
+      const data = await res.json();
+
+      if (data.error) {
+        setStatus('error', '❌ ' + data.error);
+      } else {
+        const count = data.submission_count || 1;
+        const period = data.period ? ` for ${data.period}` : '';
+        setStatus('success', `✅ Vote submitted${period}! (submission #${count} this cycle)`);
       }
-    })();
+    } catch(e) {
+      setStatus('error', '❌ Network error — please try again.');
+      console.error(e);
+    } finally {
+      btn.disabled = !currentUser;
+    }
+  }
+
+  // ================================================================
+  // Reset
+  // ================================================================
+  function resetAllToPalette() {
+    if (!confirm("Reset all placements and move everything back to the palette?")) return;
+    const { palette, top3, high, mid, low, ni } = tierElements();
+    [top3, high, mid, low, ni].flatMap(el => Array.from(el.querySelectorAll('.icon'))).forEach(icon => palette.appendChild(icon));
+    clearSelection(); clearPlacements(); updateTierHeadersAndCaps();
+  }
+
+  // ================================================================
+  // Boot
+  // ================================================================
+  (async function init() {
+    // Auth first (non-blocking for UI)
+    initAuth().catch(console.error);
+
+    // Load pokemon list
+    const loadingMsg = document.getElementById('loading-msg');
+    try {
+      const pokemon = await loadPokemonFromSheet();
+      loadingMsg.remove();
+
+      const { palette } = tierElements();
+      const byName = new Map();
+      pokemon.forEach(item => {
+        const el = makeIconEl(item);
+        palette.appendChild(el);
+        byName.set(item.name, el);
+      });
+
+      // Restore saved placements
+      const saved = loadPlacements();
+      if (saved) {
+        const { top3, high, mid, low, ni } = tierElements();
+        const apply = (arr, container) => (arr || []).forEach(name => { const el = byName.get(name); if (el) container.appendChild(el); });
+        apply(saved.top3, top3); apply(saved.high, high); apply(saved.mid, mid); apply(saved.low, low); apply(saved.ni, ni);
+      }
+
+      updateTierHeadersAndCaps();
+      setupDragAndDrop();
+
+    } catch(e) {
+      loadingMsg.textContent = '❌ Failed to load Pokémon list. ' + e.message;
+      console.error(e);
+    }
+
+    // Wire up buttons
+    document.getElementById('submitBtn').addEventListener('click', submitVote);
+    document.getElementById('resetBtn').addEventListener('click', resetAllToPalette);
+    document.getElementById('exportBtn').addEventListener('click', exportToken);
+    document.getElementById('importBtn').addEventListener('click', importTokenFlow);
+
+    // Tap outside to clear mobile selection
+    document.addEventListener('click', (e) => {
+      if (window.matchMedia("(pointer: coarse)").matches && selectedIcon && !e.target.closest('.icon') && !e.target.closest('.mobile-controls')) {
+        clearSelection();
+      }
+    });
+  })();
   </script>
 </body>
 </html>
