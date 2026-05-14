@@ -472,18 +472,21 @@
     if (!res.ok) throw new Error("Failed to fetch sheet: " + res.status);
     const text = await res.text();
 
-    // Parse CSV (simple — names won't have commas)
-    const lines = text.trim().split('\n').slice(2); // skip header
+    const lines = text.trim().split('\n').slice(2); // skip 2 header rows
     return lines
       .map(line => {
         const cols = line.split(',');
-        const name = (cols[0] || '').trim().replace(/^"|"$/g, '');
+        const name      = (cols[0] || '').trim().replace(/^"|"$/g, '');
         const imageFile = (cols[2] || '').trim().replace(/^"|"$/g, '');
+        const hidden    = (cols[3] || '').trim().replace(/^"|"$/g, '').toUpperCase();
+        const isCandy   = (cols[6] || '').trim().replace(/^"|"$/g, '').toUpperCase();
         if (!name || !imageFile) return null;
+        if (hidden === 'TRUE') return null;
+        if (isCandy !== 'TRUE') return null;
         return { name, imgUrl: IMAGE_BASE + imageFile };
       })
       .filter(Boolean);
-  }
+}
 
   // ================================================================
   // Drag & Drop
