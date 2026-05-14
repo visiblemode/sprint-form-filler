@@ -569,7 +569,7 @@
     el.dataset.id = item.name;
     el.setAttribute('aria-label', item.name);
     const img = document.createElement('img');
-    img.alt = item.name; img.src = item.imgUrl; img.crossOrigin = 'anonymous'; img.loading = 'lazy';
+    img.alt = item.name; img.src = item.imgUrl; img.loading = 'lazy';
     el.appendChild(img);
 
     el.addEventListener('dragstart', (e) => {
@@ -695,9 +695,8 @@
     try {
       const res = await fetch(APPS_SCRIPT_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          discord_id: currentUser.username,  // or currentUser.id if you prefer
+          discord_id: currentUser.username,
           top1: top3Names[0] || null,
           top2: top3Names[1] || null,
           top3: top3Names[2] || null,
@@ -705,6 +704,7 @@
           meds:  midNames,
           lows:  lowNames,
         })
+        // no headers — sends as text/plain, no preflight triggered
       });
       const data = await res.json();
 
