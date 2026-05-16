@@ -163,6 +163,33 @@
     #submit-status.success { display: block; color: #7eff7e; background: rgba(0,80,0,0.3); border: 1px solid #3a7a3a; }
     #submit-status.error   { display: block; color: #ff8080; background: rgba(80,0,0,0.3); border: 1px solid #7a3a3a; }
 
+    /* ---------- Custom modal ---------- */
+    #modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    #modal-overlay.open { display: flex; }
+    #modal-box {
+      background: #1a1a1a;
+      border: 1px solid #444;
+      border-radius: 14px;
+      padding: 24px 20px 16px;
+      max-width: 320px;
+      width: 90%;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    #modal-msg { color: #eee; font-size: 0.95rem; line-height: 1.5; }
+    #modal-buttons { display: flex; gap: 8px; justify-content: flex-end; }
+    #modal-cancel { color: #aaa; border-color: #444; }
+    #modal-confirm { background: #1a3a1a; border-color: #3a7a3a; color: #7eff7e; }
+    
     /* ---------- Loading skeleton ---------- */
     #loading-msg { color: #888; font-size: 0.9rem; padding: 8px 0; }
   </style>
@@ -233,6 +260,15 @@
       <div id="palette" class="palette" data-tier="palette" aria-label="Palette"></div>
     </section>
 
+    <div id="modal-overlay">
+      <div id="modal-box">
+        <div id="modal-msg"></div>
+        <div id="modal-buttons">
+          <button id="modal-cancel">Cancel</button>
+          <button id="modal-confirm">OK</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -297,7 +333,25 @@
     const othersOver = (!top3Over) && (isOverCap(high) || isOverCap(mid) || isOverCap(low));
     return { top3Over, othersOver };
   }
-
+  function showConfirm(msg) {
+    return new Promise(resolve => {
+      document.getElementById('modal-msg').textContent = msg;
+      const overlay = document.getElementById('modal-overlay');
+      overlay.classList.add('open');
+      const confirm = document.getElementById('modal-confirm');
+      const cancel  = document.getElementById('modal-cancel');
+      function cleanup(result) {
+        overlay.classList.remove('open');
+        confirm.removeEventListener('click', onConfirm);
+        cancel.removeEventListener('click', onCancel);
+        resolve(result);
+      }
+      const onConfirm = () => cleanup(true);
+      const onCancel  = () => cleanup(false);
+      confirm.addEventListener('click', onConfirm);
+      cancel.addEventListener('click', onCancel);
+    });
+  }
   // ================================================================
   // Persistence
   // ================================================================
@@ -681,7 +735,7 @@
 
     if (top3Over) { alertSimple("Cannot submit — more than 3 Pokémon in Top 3."); return; }
     if (othersOver) {
-      const ok = confirm("One or more tiers are over the limit.\nThis reduces the efficacy of your vote for that tier.\n\nContinue anyway?");
+      const ok = await showConfirm("One or more tiers are over the limit.\nThis reduces the efficacy of your vote for that tier.\n\nContinue anyway?");
       if (!ok) return;
     }
 
@@ -693,8 +747,7 @@
 
     const btn = document.getElementById('submitBtn');
     btn.disabled = true;
-    setStatus('loading', '⏳ Submitting…');
-
+    setStatus('loading', '⏳ Submitting… (this takes ~10 seconds, please don\'t leave)');
     try {
       const res = await fetch(APPS_SCRIPT_URL, {
         method: 'POST',
@@ -729,8 +782,9 @@
   // ================================================================
   // Reset
   // ================================================================
-  function resetAllToPalette() {
-    if (!confirm("Reset all placements and move everything back to the palette?")) return;
+  async function resetAllToPalette() {
+    const ok = await showConfirm("Reset all placements and move everything back to the palette?");
+    if (!ok) return;
     const { palette, top3, high, mid, low, ni } = tierElements();
     [top3, high, mid, low, ni].flatMap(el => Array.from(el.querySelectorAll('.icon'))).forEach(icon => palette.appendChild(icon));
     clearSelection(); clearPlacements(); updateTierHeadersAndCaps();
